@@ -98,6 +98,17 @@ export const AppProvider = ({ children }) => {
     return data;
   };
 
+  const updateProfile = async (profileData) => {
+    const data = await request('/api/auth/profile', {
+      method: 'PUT',
+      body: JSON.stringify(profileData)
+    });
+    if (data?.success && data?.user) {
+      setUser(data.user);
+    }
+    return data;
+  };
+
   const runAIAnalysis = async (progress) => {
     return await request('/api/ai/analyze', {
       method: 'POST',
@@ -296,7 +307,7 @@ export const AppProvider = ({ children }) => {
 
   const value = useMemo(() => ({
     user, isLoggedIn, login, logout,
-    authToken, registerUser, loginUser,
+    authToken, registerUser, loginUser, updateProfile,
     runAIAnalysis, solveAIDoubt, generateAIRoadmap,
     fetchLatestAIAnalysis, fetchDoubtHistory, fetchLatestRoadmap,
     generateMockOA, fetchLatestMockOA, generateProblems, fetchLatestProblems,
@@ -305,7 +316,7 @@ export const AppProvider = ({ children }) => {
     activeTab, setActiveTab,
     totalSolved,
     leetcodeData, leetcodeLoading, leetcodeError, fetchLeetCodeData
-  }), [user, isLoggedIn, login, logout, authToken, registerUser, loginUser, runAIAnalysis, solveAIDoubt, generateAIRoadmap, fetchLatestAIAnalysis, fetchDoubtHistory, fetchLatestRoadmap, generateMockOA, fetchLatestMockOA, generateProblems, fetchLatestProblems, dsaProgress, updateProgress, addTopic, updateStreak, activeTab, totalSolved, leetcodeData, leetcodeLoading, leetcodeError, fetchLeetCodeData]);
+  }), [user, isLoggedIn, login, logout, authToken, registerUser, loginUser, updateProfile, runAIAnalysis, solveAIDoubt, generateAIRoadmap, fetchLatestAIAnalysis, fetchDoubtHistory, fetchLatestRoadmap, generateMockOA, fetchLatestMockOA, generateProblems, fetchLatestProblems, dsaProgress, updateProgress, addTopic, updateStreak, activeTab, totalSolved, leetcodeData, leetcodeLoading, leetcodeError, fetchLeetCodeData]);
 
   return (
     <AppContext.Provider value={value}>

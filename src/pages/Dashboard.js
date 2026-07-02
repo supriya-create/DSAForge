@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { RadarChart, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'recharts';
 import { useApp } from '../context/AppContext';
 import ContestHistory from '../components/ContestHistory';
@@ -11,7 +11,43 @@ const activityData = [
 ];
 
 const Dashboard = () => {
-  const { user, dsaProgress, streak, leetcodeData, leetcodeLoading, leetcodeError, fetchLeetCodeData } = useApp();
+  const { user, dsaProgress, streak, leetcodeData, leetcodeLoading, leetcodeError, fetchLeetCodeData, updateProfile } = useApp();
+
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [profileForm, setProfileForm] = useState({
+    name: user?.name || '',
+    college: user?.college || '',
+    year: user?.year || '1st Year',
+    leetcode: user?.leetcode || user?.leetcodeUsername || ''
+  });
+  const [editError, setEditError] = useState('');
+  const [editSaving, setEditSaving] = useState(false);
+
+  const handleOpenEdit = () => {
+    setProfileForm({
+      name: user?.name || '',
+      college: user?.college || '',
+      year: user?.year || '1st Year',
+      leetcode: user?.leetcode || user?.leetcodeUsername || ''
+    });
+    setEditError('');
+    setIsEditingProfile(true);
+  };
+
+  const handleSaveProfile = async (e) => {
+    e.preventDefault();
+    setEditSaving(true);
+    setEditError('');
+    try {
+      await updateProfile(profileForm);
+      setIsEditingProfile(false);
+    } catch (err) {
+      console.error(err);
+      setEditError(err.message || 'Failed to update profile');
+    } finally {
+      setEditSaving(false);
+    }
+  };
 
   const leetcodeUsername = user?.leetcodeUsername || user?.leetcode || null;
   const totalSolved = leetcodeData?.summary?.totalSolved ?? 0;
@@ -52,8 +88,28 @@ const Dashboard = () => {
             <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '28px', fontWeight: 800, marginBottom: '4px' }}>
               Good morning, {user?.name?.split(' ')[0]} 👋
             </h1>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
-              {user?.college} · {user?.year} · LeetCode: <span style={{ color: 'var(--accent-cyan)' }}>@{leetcodeUsername || 'not set'}</span>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <span>{user?.college || 'No college'}</span>
+              <span>·</span>
+              <span>{user?.year || 'No year'}</span>
+              <span>·</span>
+              <span>LeetCode: <span style={{ color: 'var(--accent-cyan)' }}>@{leetcodeUsername || 'not set'}</span></span>
+              <button 
+                onClick={handleOpenEdit} 
+                style={{ 
+                  background: 'none', 
+                  border: 'none', 
+                  color: 'var(--accent-cyan)', 
+                  cursor: 'pointer', 
+                  fontSize: '12px', 
+                  padding: 0,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  textDecoration: 'underline'
+                }}
+              >
+                (Edit Profile)
+              </button>
             </p>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '10px', flexWrap: 'wrap' }}>
               <button onClick={() => fetchLeetCodeData(leetcodeUsername)} disabled={!leetcodeUsername || leetcodeLoading} style={{
@@ -264,6 +320,182 @@ const Dashboard = () => {
           </table>
         </div>
       </div>
+
+      {/* Edit Profile Modal */}
+      {isEditingProfile && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(26, 20, 16, 0.8)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border)',
+            borderRadius: '24px',
+            padding: '32px',
+            width: '100%',
+            maxWidth: '460px',
+            boxShadow: '0 0 50px rgba(0,0,0,0.6)',
+            position: 'relative'
+          }}>
+            <h3 style={{
+              fontFamily: 'var(--font-display)',
+              fontSize: '22px',
+              fontWeight: 800,
+              marginBottom: '8px'
+            }}>Edit Profile Details</h3>
+            <p style={{
+              color: 'var(--text-secondary)',
+              fontSize: '13px',
+              marginBottom: '20px'
+            }}>
+              Configure your college, graduation details, and LeetCode handle.
+            </p>
+
+            {editError && (
+              <div style={{
+                background: 'rgba(239, 68, 68, 0.1)',
+                border: '1px solid rgba(239, 68, 68, 0.2)',
+                color: '#ef4444',
+                padding: '10px 14px',
+                borderRadius: '8px',
+                fontSize: '13px',
+                marginBottom: '16px',
+                textAlign: 'center'
+              }}>
+                {editError}
+              </div>
+            )}
+
+            <form onSubmit={handleSaveProfile} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div>
+                <label style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px', display: 'block', fontWeight: 600 }}>Full Name</label>
+                <input
+                  type="text"
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    borderRadius: '8px',
+                    background: 'var(--bg-card2)',
+                    border: '1px solid var(--border)',
+                    color: 'var(--text-primary)',
+                    fontSize: '14px',
+                    outline: 'none',
+                    transition: 'border-color 0.2s'
+                  }}
+                  value={profileForm.name}
+                  onChange={e => setProfileForm({ ...profileForm, name: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px', display: 'block', fontWeight: 600 }}>College</label>
+                <input
+                  type="text"
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    borderRadius: '8px',
+                    background: 'var(--bg-card2)',
+                    border: '1px solid var(--border)',
+                    color: 'var(--text-primary)',
+                    fontSize: '14px',
+                    outline: 'none'
+                  }}
+                  value={profileForm.college}
+                  onChange={e => setProfileForm({ ...profileForm, college: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px', display: 'block', fontWeight: 600 }}>Year</label>
+                <select
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    borderRadius: '8px',
+                    background: 'var(--bg-card2)',
+                    border: '1px solid var(--border)',
+                    color: 'var(--text-primary)',
+                    fontSize: '14px',
+                    outline: 'none'
+                  }}
+                  value={profileForm.year}
+                  onChange={e => setProfileForm({ ...profileForm, year: e.target.value })}
+                >
+                  <option value="1st Year">1st Year</option>
+                  <option value="2nd Year">2nd Year</option>
+                  <option value="3rd Year">3rd Year</option>
+                  <option value="4th Year">4th Year</option>
+                  <option value="Post Graduate">Post Graduate</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px', display: 'block', fontWeight: 600 }}>LeetCode Username</label>
+                <input
+                  type="text"
+                  placeholder="e.g. aryan_codes"
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    borderRadius: '8px',
+                    background: 'var(--bg-card2)',
+                    border: '1px solid var(--border)',
+                    color: 'var(--text-primary)',
+                    fontSize: '14px',
+                    outline: 'none'
+                  }}
+                  value={profileForm.leetcode}
+                  onChange={e => setProfileForm({ ...profileForm, leetcode: e.target.value })}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsEditingProfile(false)}
+                  style={{
+                    flex: 1,
+                    padding: '10px',
+                    borderRadius: '8px',
+                    background: 'var(--bg-card2)',
+                    border: '1px solid var(--border)',
+                    color: 'var(--text-secondary)',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={editSaving}
+                  style={{
+                    flex: 1,
+                    padding: '10px',
+                    borderRadius: '8px',
+                    background: 'linear-gradient(135deg, var(--accent-cyan), var(--accent-purple))',
+                    border: 'none',
+                    color: '#fff',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    opacity: editSaving ? 0.7 : 1
+                  }}
+                >
+                  {editSaving ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
