@@ -1,12 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 
 const AuthPage = () => {
-  const { login, registerUser, loginUser } = useApp();
+  const { login, registerUser, loginUser, isLoggedIn } = useApp();
   const [mode, setMode] = useState('login');
   const [form, setForm] = useState({ name: '', email: '', password: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // After successful login/register, the parent App component will re-render
+  // and switch from AuthPage to Dashboard. This effect isn't strictly needed
+  // but helps ensure proper state synchronization.
+  useEffect(() => {
+    if (isLoggedIn) {
+      setForm({ name: '', email: '', password: '' });
+      setError('');
+    }
+  }, [isLoggedIn]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

@@ -1,4 +1,4 @@
-const { AIAnalysis, Roadmap, Doubt, Assessment, RecommendedProblem } = require('../models');
+const { AIAnalysis, Roadmap, Doubt, Assessment, RecommendedProblem, LeetcodeStats } = require('../models');
 
 const callGemini = async (prompt) => {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -31,51 +31,182 @@ const callGemini = async (prompt) => {
 };
 
 // 1. Analyze DSA Progress
+const buildLocalLeetCodeAnalysis = (stats, progress) => {
+  const weakTopics = [];
+  const strongTopics = [];
+  const roadmap = [];
+  const revisionSchedule = [];
+  const difficultyCounts = {
+    easy: stats?.easySolved ?? 0,
+    medium: stats?.mediumSolved ?? 0,
+    hard: stats?.hardSolved ?? 0,
+    total: stats ? (stats.easySolved + stats.mediumSolved + stats.hardSolved) : 0,
+  };
+
+  if (Array.isArray(progress) && progress.length) {
+    const sorted = [...progress].map(t => ({
+      topic: t.topic,
+      completion: t.total ? (t.solved / t.total) : 0,
+      solved: t.solved,
+      total: t.total
+    }));
+    sorted.sort((a, b) => a.completion - b.completion);
+    weakTopics.push(...sorted.slice(0, 3).map(t => ({ topic: t.topic, score: Math.round(t.completion * 100), reason: `${t.solved}/${t.total} problems solved` })));
+    strongTopics.push(...sorted.slice(-3).reverse().map(t => ({ topic: t.topic, score: Math.round(t.completion * 100), reason: `${t.solved}/${t.total} problems solved` })));
+  }
+
+  if (!weakTopics.length && stats) {
+    weakTopics.push({ topic: 'LeetCode practice', score: 0, reason: 'Needs actual topic-level data from progress or submission tags' });
+  }
+  if (!strongTopics.length && stats) {
+    strongTopics.push({ topic: 'LeetCode submissions', score: 100, reason: 'High solved volume indicates strong engagement' });
+  }
+
+  const contestCount = Array.isArray(stats?.contestHistory) ? stats.contestHistory.length : 0;
+  const latestContest = Array.isArray(stats?.contestHistory) ? stats.contestHistory[stats.contestHistory.length - 1] : null;
+  const bestRank = Array.isArray(stats?.contestHistory) && stats.contestHistory.length
+    ? Math.min(...stats.contestHistory.map(c => c.rank || Infinity))
+    : null;
+
+  for (let week = 1; week <= 4; week += 1) {
+    roadmap.push({
+      week,
+      focus: weakTopics[week - 1]?.topic || 'Core algorithmic concepts',
+      actions: [
+        `Solve 3-4 ${weakTopics[week - 1]?.topic || 'weak area'} problems with increasing difficulty`,
+        'Review incorrect submissions and identify edge cases',
+        'Practice a timed contest-style problem to build speed'
+      ]
+    });
+    revisionSchedule.push({
+      week,
+      focus: week === 1 ? 'Weakest topics' : week === 2 ? 'Contest strategy' : week === 3 ? 'Difficulty review' : 'Rapid revision',
+      actions: [
+        `Review ${weakTopics[week - 1]?.topic || 'key concepts'} and repeat similar problems`,
+        'Revisit previously solved problems to improve accuracy',
+        'Summarize patterns and formulas in a quick notes sheet'
+      ]
+    });
+  }
+
+  return {
+    weakestTopics: weakTopics,
+    strongestTopics: strongTopics,
+    difficultyAnalysis: {
+      easy: difficultyCounts.easy,
+      medium: difficultyCounts.medium,
+      hard: difficultyCounts.hard,
+      totalSolved: difficultyCounts.total,
+      acceptanceRate: stats?.acceptanceRate ?? 0,
+      ranking: stats?.ranking ?? null,
+      contestRating: stats?.contestRating ?? null,
+      summary: `You have solved ${difficultyCounts.total} problems with ${difficultyCounts.easy} easy, ${difficultyCounts.medium} medium, and ${difficultyCounts.hard} hard problems. Acceptance rate is ${stats?.acceptanceRate ?? 0}%.`
+    },
+    contestPerformance: {
+      totalContests: contestCount,
+      bestRank: bestRank === Infinity ? null : bestRank,
+      latestRating: latestContest ? latestContest.rating : stats?.contestRating ?? null,
+      recentTrend: latestContest ? `Latest contest rank ${latestContest.rank} with rating ${latestContest.rating}` : 'No contest data available',
+      notes: `Contest history shows ${contestCount} contests and a current rating of ${stats?.contestRating ?? 'N/A'}.`
+    },
+    personalizedRoadmap: roadmap,
+    revisionSchedule,
+  };
+};
+
 exports.analyzeProgress = async (req, res) => {
   try {
-    const { progress } = req.body;
-    if (!progress || !Array.isArray(progress)) {
+    const progress = Array.isArray(req.body.progress) ? req.body.progress : [];
+    const leetcodeStats = await LeetcodeStats.findOne({ userId: req.userId });
+
+    if (!leetcodeStats && !progress.length) {
       return res.status(400).json({
         success: false,
-        message: 'Valid progress data is required'
+        message: 'Valid LeetCode stats or progress data is required'
       });
     }
 
-    const prompt = `You are a DSA (Data Structures & Algorithms) coach analyzing a student's problem-solving progress for placement preparation.
+    const summary = leetcodeStats ? `LeetCode username: ${leetcodeStats.username}
+Total solved: ${leetcodeStats.totalSolved}
+Easy: ${leetcodeStats.easySolved}
+Medium: ${leetcodeStats.mediumSolved}
+Hard: ${leetcodeStats.hardSolved}
+Acceptance rate: ${leetcodeStats.acceptanceRate}%
+Ranking: ${leetcodeStats.ranking ?? 'N/A'}
+Contest rating: ${leetcodeStats.contestRating ?? 'N/A'}
+Last synced: ${leetcodeStats.lastSynced ? leetcodeStats.lastSynced.toISOString() : 'N/A'}` : 'No LeetCode stats available.';
 
-Here is the student's current DSA progress data:
-${progress.map(t => `- ${t.topic}: ${t.solved} solved (Easy: ${t.easy || 0}, Medium: ${t.medium || 0}, Hard: ${t.hard || 0}) out of ${t.total || 50} problems`).join('\n')}
+    const languageStats = Array.isArray(leetcodeStats?.languageStats) && leetcodeStats.languageStats.length
+      ? leetcodeStats.languageStats.map(l => `- ${l.language}: ${l.solved} solved, ${l.submissions} submissions`).join('\n')
+      : 'No language stats available.';
 
-Please analyze this data and provide:
+    const contestHistory = Array.isArray(leetcodeStats?.contestHistory) && leetcodeStats.contestHistory.length
+      ? leetcodeStats.contestHistory.map(c => `- ${c.contestId || 'contest'}: rank ${c.rank}, rating ${c.rating}, date ${c.attendedAt?.toISOString?.() || 'N/A'}`).join('\n')
+      : 'No contest history available.';
 
-1. **STRENGTH ANALYSIS**: List topics where the student is performing well (>60% completion) with brief reasons.
+    const recentSubmissions = Array.isArray(leetcodeStats?.recentSubmissions) && leetcodeStats.recentSubmissions.length
+      ? leetcodeStats.recentSubmissions.map(s => `- ${s.problemTitle || 'problem'} (${s.difficulty || 'Unknown'}): ${s.status || 'Unknown'} in ${s.language || 'Unknown'} at ${s.timestamp?.toISOString?.() || 'N/A'}`).join('\n')
+      : 'No recent submissions available.';
 
-2. **WEAKNESS ANALYSIS**: List topics that need immediate attention (<40% completion) with specific gaps.
+    const prompt = `You are a DSA coach analyzing a student's synchronized LeetCode profile and performance. Use the real LeetCode statistics below, and if available, combine them with the student's topic progress data to infer the strongest and weakest areas.
 
-3. **PRIORITY ACTION ITEMS**: Give 3-5 specific, actionable steps the student should take this week.
+Real synchronized LeetCode stats:
+${summary}
 
-4. **INTERVIEW READINESS**: Rate their overall readiness for placement interviews (1-10) with a brief justification.
+Language stats:
+${languageStats}
 
-5. **QUICK WINS**: Suggest 2-3 topics they can quickly improve to boost their confidence.
+Contest history:
+${contestHistory}
 
-Format your response clearly with these exact sections. Be specific and encouraging. Keep it concise but insightful.`;
+Recent submissions:
+${recentSubmissions}
 
-    const text = await callGemini(prompt);
+DSA topic progress (if available):
+${progress.length ? progress.map(t => `- ${t.topic}: ${t.solved}/${t.total} solved (${Math.round(((t.solved || 0)/(t.total || 1))*100)}%)`).join('\n') : 'No topic progress provided.'}
 
-    // Persist to database
+Return a strict JSON object with the following structure only:
+{
+  "weakestTopics": [{"topic":"","score":0,"reason":""}],
+  "strongestTopics": [{"topic":"","score":0,"reason":""}],
+  "difficultyAnalysis": {"easy":0,"medium":0,"hard":0,"totalSolved":0,"acceptanceRate":0,"ranking":null,"contestRating":null,"summary":""},
+  "contestPerformance": {"totalContests":0,"bestRank":null,"latestRating":null,"recentTrend":"","notes":""},
+  "personalizedRoadmap": [{"week":1,"focus":"","actions":[""]}],
+  "revisionSchedule": [{"week":1,"focus":"","actions":[""]}]
+}
+
+Do not include any markdown, backticks, or extra explanation. Respond only with valid JSON.`;
+
+    let analysis;
+    try {
+      const text = await callGemini(prompt);
+      const cleaned = text.replace(/```json|```/g, '').trim();
+      analysis = JSON.parse(cleaned);
+    } catch (geminiError) {
+      console.warn('Gemini analysis failed, falling back to local structured summary:', geminiError.message);
+      analysis = buildLocalLeetCodeAnalysis(leetcodeStats || null, progress);
+    }
+
     await AIAnalysis.findOneAndUpdate(
       { user: req.userId },
       {
         user: req.userId,
         analysisDate: new Date(),
-        rawAnalysis: text
+        weaknesses: analysis.weakestTopics || [],
+        strengths: analysis.strongestTopics || [],
+        suggestions: (analysis.personalizedRoadmap || []).flatMap(w => w.actions || []),
+        metrics: {
+          difficultyAnalysis: analysis.difficultyAnalysis || {},
+          contestPerformance: analysis.contestPerformance || {}
+        },
+        rawAnalysis: analysis
       },
       { upsert: true, new: true }
     );
 
     res.status(200).json({
       success: true,
-      analysis: text
+      analysis
     });
   } catch (error) {
     res.status(500).json({

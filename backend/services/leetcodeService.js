@@ -11,6 +11,34 @@ class AppError extends Error {
   }
 }
 
+// In-memory cache for fetched profiles (simple TTL cache)
+const CACHE_TTL_MS = parseInt(process.env.LEETCODE_CACHE_TTL_MS || String(1000 * 60 * 60), 10); // default 1 hour
+const cache = new Map(); // username -> { data, expiresAt }
+
+// In-flight dedupe map to prevent duplicate concurrent requests
+const inflight = new Map(); // username -> Promise
+
+// Retry/backoff configuration
+const MAX_FETCH_RETRIES = parseInt(process.env.LEETCODE_FETCH_MAX_RETRIES || '4', 10);
+const INITIAL_FETCH_BACKOFF_MS = parseInt(process.env.LEETCODE_FETCH_INITIAL_BACKOFF_MS || '1000', 10);
+
+// Structured logging helper
+const log = (level, message, meta = {}) => {
+  const entry = { ts: new Date().toISOString(), level, message, ...meta };
+  try {
+    console.log(JSON.stringify(entry));
+  } catch (e) {
+    console.log(level, message, meta);
+  }
+};
+
+const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
+
+const isTransientStatus = (status) => {
+  // Treat 429 and 5xx as transient
+  return status === 429 || (status >= 500 && status < 600);
+};
+
 const buildLeetCodeQuery = () => `
   query userProfile($username: String!) {
     matchedUser(username: $username) {
@@ -53,34 +81,101 @@ const normalizeLeetCodeProfile = (matchedUser) => {
 };
 
 const fetchLeetCodeProfile = async (username, { fetchImpl = fetch } = {}) => {
-  if (!username) {
+  if (!username || typeof username !== 'string' || !username.trim()) {
     throw new AppError(400, 'LeetCode username is required');
   }
+  username = username.trim();
 
-  const response = await fetchImpl(LEETCODE_GRAPHQL_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-    },
-    body: JSON.stringify({
-      query: buildLeetCodeQuery(),
-      variables: { username },
-    }),
-  });
-
-  if (!response.ok) {
-    throw new AppError(502, `LeetCode API returned status ${response.status}`);
+  // Serve from cache if fresh
+  const cached = cache.get(username);
+  if (cached && cached.expiresAt > Date.now()) {
+    log('debug', 'cache_hit', { username });
+    return cached.data;
   }
 
-  const data = await response.json();
-  const matchedUser = data?.data?.matchedUser;
-
-  if (!matchedUser) {
-    throw new AppError(404, `LeetCode user "${username}" not found`);
+  // If a request for this username is already in-flight, reuse its Promise
+  if (inflight.has(username)) {
+    log('debug', 'dedupe_inflight', { username });
+    return inflight.get(username);
   }
 
-  return normalizeLeetCodeProfile(matchedUser);
+  // Create a promise and store in inflight map
+  const promise = (async () => {
+    let attempt = 0;
+    let backoff = INITIAL_FETCH_BACKOFF_MS;
+    while (attempt <= MAX_FETCH_RETRIES) {
+      attempt += 1;
+      try {
+        log('info', 'fetch_attempt', { username, attempt });
+        const response = await fetchImpl(LEETCODE_GRAPHQL_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'User-Agent': process.env.LEETCODE_USER_AGENT || 'DSAForge/1.0 (+https://example.com)'
+          },
+          body: JSON.stringify({
+            query: buildLeetCodeQuery(),
+            variables: { username },
+          }),
+        });
+
+        if (!response.ok) {
+          const status = response.status;
+          const retryAfter = parseInt(response.headers.get('retry-after') || '0', 10);
+          log('warn', 'fetch_response_not_ok', { username, status, retryAfter });
+          if (isTransientStatus(status) && attempt <= MAX_FETCH_RETRIES) {
+            const waitMs = retryAfter > 0 ? retryAfter * 1000 : backoff;
+            log('info', 'transient_retry', { username, attempt, waitMs });
+            await sleep(waitMs);
+            backoff *= 2;
+            continue;
+          }
+          if (status === 404) {
+            throw new AppError(404, `LeetCode user \"${username}\" not found`);
+          }
+          throw new AppError(502, `LeetCode API returned status ${status}`);
+        }
+
+        const data = await response.json();
+        const matchedUser = data?.data?.matchedUser;
+        if (!matchedUser) {
+          throw new AppError(404, `LeetCode user \"${username}\" not found`);
+        }
+
+        const normalized = normalizeLeetCodeProfile(matchedUser);
+        // Cache result
+        cache.set(username, { data: normalized, expiresAt: Date.now() + CACHE_TTL_MS });
+        log('info', 'fetch_success', { username });
+        return normalized;
+      } catch (err) {
+        // If it's an AppError that's non-transient, rethrow immediately
+        if (err instanceof AppError && err.statusCode && err.statusCode < 500 && err.statusCode !== 429) {
+          log('error', 'fetch_nonretriable_error', { username, message: err.message });
+          throw err;
+        }
+
+        // Last attempt: throw
+        if (attempt > MAX_FETCH_RETRIES) {
+          log('error', 'fetch_exhausted', { username, attempt, message: err.message });
+          throw new AppError(502, `Failed to fetch LeetCode profile for ${username}: ${err.message}`);
+        }
+
+        // Transient error - backoff and retry
+        log('warn', 'fetch_transient_error', { username, attempt, message: err.message });
+        await sleep(backoff);
+        backoff *= 2;
+      }
+    }
+    throw new AppError(502, 'Unknown error fetching LeetCode profile');
+  })();
+
+  inflight.set(username, promise);
+  try {
+    const result = await promise;
+    return result;
+  } finally {
+    inflight.delete(username);
+  }
 };
 
 const getStoredLeetCodeProfile = async ({ userId }) => {
@@ -121,17 +216,22 @@ const syncLeetCodeProfile = async ({ userId, username, fetchImpl = fetch }) => {
     throw new AppError(400, 'LeetCode username is required or not set in profile');
   }
 
+  // Use the improved fetch which includes caching and retries
   const normalizedProfile = await fetchLeetCodeProfile(leetcodeUsername, { fetchImpl });
+
+  if (!normalizedProfile || !normalizedProfile.summary) {
+    throw new AppError(502, 'Invalid profile data returned from LeetCode');
+  }
 
   const statsPayload = {
     userId,
     username: normalizedProfile.username || leetcodeUsername,
-    totalSolved: normalizedProfile.summary.totalSolved,
-    easySolved: normalizedProfile.summary.easySolved,
-    mediumSolved: normalizedProfile.summary.mediumSolved,
-    hardSolved: normalizedProfile.summary.hardSolved,
+    totalSolved: normalizedProfile.summary.totalSolved || 0,
+    easySolved: normalizedProfile.summary.easySolved || 0,
+    mediumSolved: normalizedProfile.summary.mediumSolved || 0,
+    hardSolved: normalizedProfile.summary.hardSolved || 0,
     acceptanceRate: 0,
-    ranking: normalizedProfile.summary.ranking,
+    ranking: normalizedProfile.summary.ranking || null,
     contestRating: 0,
     contestHistory: [],
     recentSubmissions: [],
@@ -149,11 +249,11 @@ const syncLeetCodeProfile = async ({ userId, username, fetchImpl = fetch }) => {
   await LeetCodeStat.findOneAndUpdate(
     { user: userId },
     {
-      totalSolved: normalizedProfile.summary.totalSolved,
-      easySolved: normalizedProfile.summary.easySolved,
-      mediumSolved: normalizedProfile.summary.mediumSolved,
-      hardSolved: normalizedProfile.summary.hardSolved,
-      ranking: normalizedProfile.summary.ranking,
+      totalSolved: normalizedProfile.summary.totalSolved || 0,
+      easySolved: normalizedProfile.summary.easySolved || 0,
+      mediumSolved: normalizedProfile.summary.mediumSolved || 0,
+      hardSolved: normalizedProfile.summary.hardSolved || 0,
+      ranking: normalizedProfile.summary.ranking || null,
       lastSyncedAt: new Date(),
       rawProfile: normalizedProfile,
     },

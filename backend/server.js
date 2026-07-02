@@ -12,6 +12,9 @@ const leetcodeRoutes = require('./routes/leetcodeRoutes');
 const app = express();
 const PORT = process.env.PORT || 5001;
 
+// Scheduler (start after server is ready)
+const { startScheduler } = require('./scheduler/leetcodeSyncScheduler');
+
 // Connect to MongoDB
 connectDB();
 
@@ -122,6 +125,12 @@ app.listen(PORT, () => {
   console.log(`   POST   /api/auth/change-password - Change password (protected)`);
   console.log(`   POST   /api/auth/verify-token - Verify token (protected)`);
   console.log(`   POST   /api/auth/logout - Logout (protected)\n`);
+  // Start scheduled background jobs
+  try {
+    startScheduler();
+  } catch (err) {
+    console.error('Failed to start scheduler:', err);
+  }
 });
 
 module.exports = app;

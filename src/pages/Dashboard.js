@@ -3,6 +3,7 @@ import { RadarChart, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer, Area
 import { useApp } from '../context/AppContext';
 import ContestHistory from '../components/ContestHistory';
 import RecentSubmissions from '../components/RecentSubmissions';
+import SubmissionHeatmap from '../components/SubmissionHeatmap';
 
 const activityData = [
   { day: 'Mon', solved: 4 }, { day: 'Tue', solved: 7 }, { day: 'Wed', solved: 3 },
@@ -173,6 +174,7 @@ const Dashboard = () => {
         </div>
       </div>
 
+      <SubmissionHeatmap recentSubmissions={leetcodeData?.recentSubmissions || []} />
       <ContestHistory contestHistory={leetcodeData?.contestHistory || []} />
       <RecentSubmissions recentSubmissions={leetcodeData?.recentSubmissions || []} />
 

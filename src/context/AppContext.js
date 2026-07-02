@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
 
 const AppContext = createContext();
 
@@ -159,8 +159,9 @@ export const AppProvider = ({ children }) => {
       const data = await request('/api/auth/me', { method: 'GET' });
       login(data.user, null);
     } catch (err) {
-      console.warn('Unable to load current user', err.message);
-      logout();
+      // Don't logout on error - user is already logged in via loginUser/registerUser
+      // This endpoint might fail for various reasons but shouldn't undo the login
+      console.warn('Unable to load current user profile:', err.message);
     }
   };
 
@@ -293,19 +294,21 @@ export const AppProvider = ({ children }) => {
 
   const totalSolved = dsaProgress.reduce((sum, t) => sum + t.solved, 0);
 
+  const value = useMemo(() => ({
+    user, isLoggedIn, login, logout,
+    authToken, registerUser, loginUser,
+    runAIAnalysis, solveAIDoubt, generateAIRoadmap,
+    fetchLatestAIAnalysis, fetchDoubtHistory, fetchLatestRoadmap,
+    generateMockOA, fetchLatestMockOA, generateProblems, fetchLatestProblems,
+    dsaProgress, updateProgress, addTopic,
+    streak, setStreak: updateStreak,
+    activeTab, setActiveTab,
+    totalSolved,
+    leetcodeData, leetcodeLoading, leetcodeError, fetchLeetCodeData
+  }), [user, isLoggedIn, login, logout, authToken, registerUser, loginUser, runAIAnalysis, solveAIDoubt, generateAIRoadmap, fetchLatestAIAnalysis, fetchDoubtHistory, fetchLatestRoadmap, generateMockOA, fetchLatestMockOA, generateProblems, fetchLatestProblems, dsaProgress, updateProgress, addTopic, updateStreak, activeTab, totalSolved, leetcodeData, leetcodeLoading, leetcodeError, fetchLeetCodeData]);
+
   return (
-    <AppContext.Provider value={{
-      user, isLoggedIn, login, logout,
-      authToken, registerUser, loginUser,
-      runAIAnalysis, solveAIDoubt, generateAIRoadmap,
-      fetchLatestAIAnalysis, fetchDoubtHistory, fetchLatestRoadmap,
-      generateMockOA, fetchLatestMockOA, generateProblems, fetchLatestProblems,
-      dsaProgress, updateProgress, addTopic,
-      streak, setStreak: updateStreak,
-      activeTab, setActiveTab,
-      totalSolved,
-      leetcodeData, leetcodeLoading, leetcodeError, fetchLeetCodeData
-    }}>
+    <AppContext.Provider value={value}>
       {children}
     </AppContext.Provider>
   );

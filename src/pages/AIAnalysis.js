@@ -20,9 +20,21 @@ Please analyze this data and provide:
 
 Format your response clearly with these exact sections. Be specific and encouraging. Keep it concise but insightful.`;
 
+const isStructuredAnalysis = (analysis) => {
+  return analysis && typeof analysis === 'object' && !Array.isArray(analysis) && ('weakestTopics' in analysis || 'difficultyAnalysis' in analysis);
+};
+
+const chunkArray = (items, size) => {
+  const chunks = [];
+  for (let i = 0; i < items.length; i += size) {
+    chunks.push(items.slice(i, i + size));
+  }
+  return chunks;
+};
+
 const AIAnalysis = () => {
   const { dsaProgress, runAIAnalysis, fetchLatestAIAnalysis } = useApp();
-  const [analysis, setAnalysis] = useState('');
+  const [analysis, setAnalysis] = useState(null);
   const [loading, setLoading] = useState(false);
   const [analyzed, setAnalyzed] = useState(false);
 
@@ -43,41 +55,68 @@ const AIAnalysis = () => {
 
   const runAnalysis = async () => {
     setLoading(true);
-    setAnalysis('');
+    setAnalysis(null);
     try {
       const data = await runAIAnalysis(dsaProgress);
-      setAnalysis(data.analysis);
+      if (data && data.analysis) {
+        setAnalysis(data.analysis);
+      } else {
+        setAnalysis(data);
+      }
       setAnalyzed(true);
     } catch (err) {
       console.warn('API key not configured or network issue, using simulated AI fallback:', err.message);
-      // Simulate API delay
       await new Promise(r => setTimeout(r, 1500));
-      
-      // Mock response based on user progress
-      const weakTopics = dsaProgress.filter(t => (t.solved/t.total) < 0.4).map(t => t.topic);
-      const strongTopics = dsaProgress.filter(t => (t.solved/t.total) > 0.6).map(t => t.topic);
-      
-      const mockAnalysis = `**STRENGTH ANALYSIS**
-You're excelling in: ${strongTopics.slice(0, 2).join(', ') || 'your fundamentals'}. Your foundation in these areas is solid and will serve you well in interviews.
 
-**WEAKNESS ANALYSIS**
-Focus on: ${weakTopics.slice(0, 2).join(', ') || 'advanced topics'}. These topics are critical for placement interviews and need immediate attention.
-
-**PRIORITY ACTION ITEMS**
-1. Master ${weakTopics[0] || 'Arrays'} fundamentals - complete at least 5 medium problems this week
-2. Practice ${weakTopics[1] || 'Strings'} with real interview questions
-3. Review edge cases and optimizations in ${strongTopics[0] || 'Sorting'}
-4. Solve 3 mixed difficulty problems combining your weak and strong topics
-5. Time yourself on mock problems (45 min limit)
-
-**INTERVIEW READINESS**
-7/10 - You have good coverage but need to strengthen weaker areas. With focused effort on ${weakTopics[0] || 'Recursion'}, you could reach 8.5/10 in 2 weeks.
-
-**QUICK WINS**
-- ${weakTopics[0] || 'Recursion'}: Easy problems first to build confidence
-- ${strongTopics[0] || 'Strings'}: Advanced problems to deepen expertise
-- Mock interviews: 2 this week to practice under pressure`;
-      
+      const weakTopics = dsaProgress.filter(t => (t.solved / t.total) < 0.4).map(t => t.topic);
+      const strongTopics = dsaProgress.filter(t => (t.solved / t.total) > 0.6).map(t => t.topic);
+      const mockAnalysis = {
+        weakestTopics: weakTopics.slice(0, 3).map((topic, index) => ({
+          topic,
+          score: Math.round((dsaProgress.find(t => t.topic === topic)?.solved || 0) / (dsaProgress.find(t => t.topic === topic)?.total || 1) * 100),
+          reason: `Low completion on ${topic}`
+        })),
+        strongestTopics: strongTopics.slice(0, 3).map((topic) => ({
+          topic,
+          score: Math.round((dsaProgress.find(t => t.topic === topic)?.solved || 0) / (dsaProgress.find(t => t.topic === topic)?.total || 1) * 100),
+          reason: `High completion on ${topic}`
+        })),
+        difficultyAnalysis: {
+          easy: dsaProgress.reduce((sum, t) => sum + (t.easy || 0), 0),
+          medium: dsaProgress.reduce((sum, t) => sum + (t.medium || 0), 0),
+          hard: dsaProgress.reduce((sum, t) => sum + (t.hard || 0), 0),
+          totalSolved: dsaProgress.reduce((sum, t) => sum + t.solved, 0),
+          acceptanceRate: 0,
+          ranking: null,
+          contestRating: null,
+          summary: 'Using DSA progress data to estimate difficulty distribution.'
+        },
+        contestPerformance: {
+          totalContests: 0,
+          bestRank: null,
+          latestRating: null,
+          recentTrend: 'No contest data available',
+          notes: 'Contest performance will be available after syncing your LeetCode profile.'
+        },
+        personalizedRoadmap: Array.from({ length: 4 }, (_, index) => ({
+          week: index + 1,
+          focus: weakTopics[index] || 'Core concepts',
+          actions: [
+            `Solve problems in ${weakTopics[index] || 'core algorithms'}`,
+            'Review mistakes from previous submissions',
+            'Practice one timed problem every session'
+          ]
+        })),
+        revisionSchedule: Array.from({ length: 4 }, (_, index) => ({
+          week: index + 1,
+          focus: index === 0 ? 'Weakest topics' : index === 1 ? 'Contest preparation' : index === 2 ? 'Difficulty review' : 'Revision and retention',
+          actions: [
+            'Review core patterns',
+            'Re-solve one previously solved problem',
+            'Summarize key takeaways in notes'
+          ]
+        }))
+      };
       setAnalysis(mockAnalysis);
       setAnalyzed(true);
     } finally {
@@ -85,18 +124,115 @@ Focus on: ${weakTopics.slice(0, 2).join(', ') || 'advanced topics'}. These topic
     }
   };
 
-  const parseAnalysis = (text) => {
+  const renderTextAnalysis = (text) => {
     const sections = [];
-    const sectionMatches = text.split(/\*\*([^*]+)\*\*/);
+    const sectionMatches = String(text).split(/\*\*([^*]+)\*\*/);
     for (let i = 1; i < sectionMatches.length; i += 2) {
       sections.push({ title: sectionMatches[i], content: sectionMatches[i + 1]?.trim() || '' });
     }
-    return sections.length > 0 ? sections : [{ title: 'Analysis', content: text }];
+    if (!sections.length) {
+      return [{ title: 'Analysis', content: String(text) }];
+    }
+    return sections;
+  };
+
+  const renderStructuredAnalysis = (analysisData) => {
+    const {
+      weakestTopics = [],
+      strongestTopics = [],
+      difficultyAnalysis = {},
+      contestPerformance = {},
+      personalizedRoadmap = [],
+      revisionSchedule = []
+    } = analysisData;
+
+    return (
+      <>
+        <div style={{ display: 'grid', gap: '16px', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', marginBottom: '16px' }}>
+          <div className="card" style={{ borderColor: 'rgba(16,185,129,0.14)' }}>
+            <div style={{ fontSize: '14px', fontWeight: 700, marginBottom: '10px' }}>✅ Strongest Topics</div>
+            {strongestTopics.length ? strongestTopics.map((topic) => (
+              <div key={topic.topic} style={{ marginBottom: '10px' }}>
+                <div style={{ fontWeight: 700 }}>{topic.topic} <span style={{ color: 'var(--accent-green)' }}>({topic.score}%)</span></div>
+                <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{topic.reason}</div>
+              </div>
+            )) : <div style={{ color: 'var(--text-muted)' }}>No strong topics available.</div>}
+          </div>
+          <div className="card" style={{ borderColor: 'rgba(249,115,22,0.14)' }}>
+            <div style={{ fontSize: '14px', fontWeight: 700, marginBottom: '10px' }}>⚠️ Weakest Topics</div>
+            {weakestTopics.length ? weakestTopics.map((topic) => (
+              <div key={topic.topic} style={{ marginBottom: '10px' }}>
+                <div style={{ fontWeight: 700 }}>{topic.topic} <span style={{ color: 'var(--accent-pink)' }}>({topic.score}%)</span></div>
+                <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{topic.reason}</div>
+              </div>
+            )) : <div style={{ color: 'var(--text-muted)' }}>No weak topics identified.</div>}
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gap: '16px', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', marginBottom: '16px' }}>
+          <div className="card" style={{ borderColor: 'rgba(59,130,246,0.14)' }}>
+            <div style={{ fontSize: '14px', fontWeight: 700, marginBottom: '14px' }}>📚 Difficulty Analysis</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '10px', marginBottom: '12px' }}>
+              <div style={{ fontSize: '13px' }}>Easy solved</div>
+              <div style={{ fontWeight: 700, textAlign: 'right' }}>{difficultyAnalysis.easy ?? 0}</div>
+              <div style={{ fontSize: '13px' }}>Medium solved</div>
+              <div style={{ fontWeight: 700, textAlign: 'right' }}>{difficultyAnalysis.medium ?? 0}</div>
+              <div style={{ fontSize: '13px' }}>Hard solved</div>
+              <div style={{ fontWeight: 700, textAlign: 'right' }}>{difficultyAnalysis.hard ?? 0}</div>
+              <div style={{ fontSize: '13px' }}>Total solved</div>
+              <div style={{ fontWeight: 700, textAlign: 'right' }}>{difficultyAnalysis.totalSolved ?? 0}</div>
+            </div>
+            <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '10px' }}>Acceptance rate: {difficultyAnalysis.acceptanceRate ?? 0}%</div>
+            <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Ranking: {difficultyAnalysis.ranking ?? 'N/A'}</div>
+            <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Contest rating: {difficultyAnalysis.contestRating ?? 'N/A'}</div>
+            {difficultyAnalysis.summary && <div style={{ marginTop: '12px', fontSize: '13px', color: 'var(--text-secondary)', whiteSpace: 'pre-wrap' }}>{difficultyAnalysis.summary}</div>}
+          </div>
+
+          <div className="card" style={{ borderColor: 'rgba(168,85,247,0.14)' }}>
+            <div style={{ fontSize: '14px', fontWeight: 700, marginBottom: '14px' }}>🏁 Contest Performance</div>
+            <div style={{ fontSize: '13px', marginBottom: '8px' }}>Total contests: <strong>{contestPerformance.totalContests ?? 0}</strong></div>
+            <div style={{ fontSize: '13px', marginBottom: '8px' }}>Best rank: <strong>{contestPerformance.bestRank ?? 'N/A'}</strong></div>
+            <div style={{ fontSize: '13px', marginBottom: '8px' }}>Latest rating: <strong>{contestPerformance.latestRating ?? 'N/A'}</strong></div>
+            <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '10px' }}>Trend: {contestPerformance.recentTrend || 'No trend available'}</div>
+            {contestPerformance.notes && <div style={{ fontSize: '13px', color: 'var(--text-secondary)', whiteSpace: 'pre-wrap' }}>{contestPerformance.notes}</div>}
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gap: '16px', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))' }}>
+          <div className="card" style={{ borderColor: 'rgba(34,197,94,0.14)' }}>
+            <div style={{ fontSize: '14px', fontWeight: 700, marginBottom: '14px' }}>🗺️ Personalized Roadmap</div>
+            {personalizedRoadmap.length ? personalizedRoadmap.map(item => (
+              <div key={item.week} style={{ marginBottom: '12px' }}>
+                <div style={{ fontWeight: 700 }}>Week {item.week}: {item.focus}</div>
+                <ul style={{ margin: '8px 0 0', paddingLeft: '18px', color: 'var(--text-secondary)', fontSize: '13px' }}>
+                  {item.actions.map((action, index) => <li key={index}>{action}</li>)}
+                </ul>
+              </div>
+            )) : <div style={{ color: 'var(--text-muted)' }}>No roadmap available.</div>}
+          </div>
+
+          <div className="card" style={{ borderColor: 'rgba(249,115,22,0.14)' }}>
+            <div style={{ fontSize: '14px', fontWeight: 700, marginBottom: '14px' }}>📅 Revision Schedule</div>
+            {revisionSchedule.length ? revisionSchedule.map(item => (
+              <div key={item.week} style={{ marginBottom: '12px' }}>
+                <div style={{ fontWeight: 700 }}>Week {item.week}: {item.focus}</div>
+                <ul style={{ margin: '8px 0 0', paddingLeft: '18px', color: 'var(--text-secondary)', fontSize: '13px' }}>
+                  {item.actions.map((action, index) => <li key={index}>{action}</li>)}
+                </ul>
+              </div>
+            )) : <div style={{ color: 'var(--text-muted)' }}>No revision schedule available.</div>}
+          </div>
+        </div>
+      </>
+    );
   };
 
   const sectionColors = {
-    'STRENGTH': 'var(--accent-green)', 'WEAKNESS': 'var(--accent-pink)',
-    'PRIORITY': 'var(--accent-cyan)', 'INTERVIEW': 'var(--accent-purple)', 'QUICK': 'var(--accent-orange)'
+    STRENGTH: 'var(--accent-green)',
+    WEAKNESS: 'var(--accent-pink)',
+    PRIORITY: 'var(--accent-cyan)',
+    INTERVIEW: 'var(--accent-purple)',
+    QUICK: 'var(--accent-orange)'
   };
   const getSectionColor = (title) => {
     for (const [key, color] of Object.entries(sectionColors)) {
@@ -208,21 +344,23 @@ Focus on: ${weakTopics.slice(0, 2).join(', ') || 'advanced topics'}. These topic
 
         {analysis && !loading && (
           <div className="animate-fadeIn">
-            {parseAnalysis(analysis).map((section, i) => (
-              <div key={i} style={{
-                background: 'var(--bg-deep)', border: '1px solid var(--border)',
-                borderLeft: `3px solid ${getSectionColor(section.title)}`,
-                borderRadius: '10px', padding: '16px', marginBottom: '12px'
-              }}>
-                <div style={{
-                  fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 700,
-                  color: getSectionColor(section.title), marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px'
-                }}>{section.title}</div>
-                <div style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: '1.7', whiteSpace: 'pre-wrap' }}>
-                  {section.content}
+            {isStructuredAnalysis(analysis)
+              ? renderStructuredAnalysis(analysis)
+              : renderTextAnalysis(analysis).map((section, i) => (
+                <div key={i} style={{
+                  background: 'var(--bg-deep)', border: '1px solid var(--border)',
+                  borderLeft: `3px solid ${getSectionColor(section.title)}`,
+                  borderRadius: '10px', padding: '16px', marginBottom: '12px'
+                }}>
+                  <div style={{
+                    fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 700,
+                    color: getSectionColor(section.title), marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px'
+                  }}>{section.title}</div>
+                  <div style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: '1.7', whiteSpace: 'pre-wrap' }}>
+                    {section.content}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
           </div>
         )}
       </div>

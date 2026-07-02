@@ -29,7 +29,11 @@ const buildLeetCodePayload = (stats) => {
 
 // Generate JWT Token
 const generateToken = (userId) => {
-  return jwt.sign({ id: userId }, process.env.JWT_SECRET, {
+  const secret = process.env.JWT_SECRET || 'dev-default-jwt-secret-change-me';
+  if (!process.env.JWT_SECRET) {
+    console.warn('Warning: JWT_SECRET is not set. Using a development fallback secret. Do not use in production.');
+  }
+  return jwt.sign({ id: userId }, secret, {
     expiresIn: process.env.JWT_EXPIRE || '7d'
   });
 };
@@ -87,6 +91,16 @@ exports.register = async (req, res) => {
       user: user.toJSON()
     });
   } catch (error) {
+    // Handle mongoose validation errors gracefully
+    if (error && error.name === 'ValidationError') {
+      const details = Object.keys(error.errors).map(k => ({ field: k, message: error.errors[k].message }));
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: details
+      });
+    }
+
     res.status(500).json({
       success: false,
       message: 'Server error during registration',
