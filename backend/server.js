@@ -7,6 +7,7 @@ const connectDB = require('./config/db');
 const authRoutes = require('./routes/authRoutes');
 const aiRoutes = require('./routes/aiRoutes');
 const trackerRoutes = require('./routes/trackerRoutes');
+const leetcodeRoutes = require('./routes/leetcodeRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -59,6 +60,7 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/tracker', trackerRoutes);
+app.use('/api/leetcode', leetcodeRoutes);
 
 // Serve frontend build if it exists (so backend can host both frontend + API)
 const buildPath = path.join(__dirname, '..', 'build');

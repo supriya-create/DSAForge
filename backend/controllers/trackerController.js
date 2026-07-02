@@ -1,4 +1,5 @@
-const { TopicProgress, Streak, LeetCodeStat, User, DailyActivity } = require('../models');
+const { TopicProgress, Streak, DailyActivity } = require('../models');
+const { getStoredLeetCodeProfile, syncLeetCodeProfile, AppError } = require('../services/leetcodeService');
 
 const DEFAULT_TOPICS = [
   { topic: 'Arrays', solved: 35, easy: 20, medium: 12, hard: 3, total: 80 },
@@ -230,17 +231,18 @@ exports.updateStreak = async (req, res) => {
 exports.getLeetCodeData = async (req, res) => {
   try {
     const userId = req.userId;
-    const leetcodeStat = await LeetCodeStat.findOne({ user: userId });
-    
+    const leetcodeData = await getStoredLeetCodeProfile({ userId });
+
     res.status(200).json({
       success: true,
-      leetcodeData: leetcodeStat ? leetcodeStat.rawProfile : null
+      leetcodeData
     });
   } catch (error) {
-    res.status(500).json({
+    const statusCode = error instanceof AppError ? error.statusCode : 500;
+    res.status(statusCode).json({
       success: false,
-      message: 'Server error retrieving LeetCode stats',
-      error: error.message
+      message: error.message || 'Server error retrieving LeetCode stats',
+      error: error.details || null
     });
   }
 };
@@ -251,80 +253,19 @@ exports.syncLeetCodeData = async (req, res) => {
     const userId = req.userId;
     const { username } = req.body;
 
-    let leetcodeUsername = username;
-    if (!leetcodeUsername) {
-      const user = await User.findById(userId);
-      leetcodeUsername = user?.leetcode;
-    }
-
-    if (!leetcodeUsername) {
-      return res.status(400).json({
-        success: false,
-        message: 'LeetCode username is required or not set in profile'
-      });
-    }
-
-    const query = `query userProfile($username: String!) { matchedUser(username: $username) { username profile { realName ranking reputation } submitStats { acSubmissionNum { difficulty count submissions } } } }`;
-    const response = await fetch('https://leetcode.com/graphql', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-      },
-      body: JSON.stringify({ query, variables: { username: leetcodeUsername } })
-    });
-
-    if (!response.ok) {
-      throw new Error(`LeetCode API returned status ${response.status}`);
-    }
-
-    const data = await response.json();
-    const matchedUser = data?.data?.matchedUser;
-
-    if (!matchedUser) {
-      return res.status(404).json({
-        success: false,
-        message: `LeetCode user "${leetcodeUsername}" not found`
-      });
-    }
-
-    const submissions = matchedUser.submitStats?.acSubmissionNum || [];
-    const easyCount = submissions.find(s => s.difficulty === 'Easy')?.count || 0;
-    const mediumCount = submissions.find(s => s.difficulty === 'Medium')?.count || 0;
-    const hardCount = submissions.find(s => s.difficulty === 'Hard')?.count || 0;
-    const totalCount = submissions.find(s => s.difficulty === 'All')?.count || (easyCount + mediumCount + hardCount);
-
-    const leetcodeStat = await LeetCodeStat.findOneAndUpdate(
-      { user: userId },
-      {
-        totalSolved: totalCount,
-        easySolved: easyCount,
-        mediumSolved: mediumCount,
-        hardSolved: hardCount,
-        ranking: matchedUser.profile?.ranking || null,
-        lastSyncedAt: new Date(),
-        rawProfile: matchedUser
-      },
-      { upsert: true, new: true }
-    );
-
-    if (username) {
-      const user = await User.findById(userId);
-      if (user && user.leetcode !== username) {
-        user.leetcode = username;
-        await user.save();
-      }
-    }
+    const result = await syncLeetCodeProfile({ userId, username });
 
     res.status(200).json({
       success: true,
-      leetcodeData: leetcodeStat.rawProfile
+      leetcodeData: result.leetcodeData,
+      summary: result.summary
     });
   } catch (error) {
-    res.status(500).json({
+    const statusCode = error instanceof AppError ? error.statusCode : 500;
+    res.status(statusCode).json({
       success: false,
-      message: 'Server error syncing LeetCode data',
-      error: error.message
+      message: error.message || 'Server error syncing LeetCode data',
+      error: error.details || null
     });
   }
 };
