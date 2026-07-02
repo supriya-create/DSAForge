@@ -2,6 +2,7 @@ module.exports = {
   User: require('./User'),
   Progress: require('./Progress'),
   LeetCodeStat: require('./LeetCodeStat'),
+  LeetcodeStats: require('./LeetcodeStats'),
   DailyActivity: require('./DailyActivity'),
   Streak: require('./Streak'),
   Roadmap: require('./Roadmap'),

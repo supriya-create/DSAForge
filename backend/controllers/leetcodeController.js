@@ -26,6 +26,13 @@ const syncLeetCodeProfileHandler = async (req, res) => {
     const userId = req.userId;
     const { username } = req.body;
 
+    if (typeof username !== 'undefined' && typeof username !== 'string') {
+      return res.status(400).json({
+        success: false,
+        message: 'Username must be a string when provided',
+      });
+    }
+
     const result = await syncLeetCodeProfile({ userId, username });
 
     res.status(200).json({

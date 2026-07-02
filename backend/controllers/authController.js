@@ -1,6 +1,31 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const { LeetcodeStats } = require('../models');
+const { syncLeetCodeProfile } = require('../services/leetcodeService');
 const { validationResult } = require('express-validator');
+
+const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+
+const buildLeetCodePayload = (stats) => {
+  if (!stats) return null;
+
+  return {
+    username: stats.username,
+    summary: {
+      totalSolved: stats.totalSolved,
+      easySolved: stats.easySolved,
+      mediumSolved: stats.mediumSolved,
+      hardSolved: stats.hardSolved,
+      ranking: stats.ranking,
+    },
+    contestRating: stats.contestRating,
+    contestHistory: stats.contestHistory || [],
+    recentSubmissions: stats.recentSubmissions || [],
+    badges: stats.badges || [],
+    languageStats: stats.languageStats || [],
+    lastSynced: stats.lastSynced,
+  };
+};
 
 // Generate JWT Token
 const generateToken = (userId) => {
@@ -106,6 +131,20 @@ exports.login = async (req, res) => {
     user.lastLogin = new Date();
     await user.save();
 
+    const cachedStats = await LeetcodeStats.findOne({ userId: user._id }).lean();
+    const username = user.leetcodeUsername || user.leetcode || null;
+    const shouldSync = !cachedStats || !cachedStats.lastSynced || (Date.now() - new Date(cachedStats.lastSynced).getTime()) > TWENTY_FOUR_HOURS;
+
+    if (shouldSync && username) {
+      void (async () => {
+        try {
+          await syncLeetCodeProfile({ userId: user._id, username });
+        } catch (error) {
+          console.error('Background LeetCode sync failed during login:', error.message);
+        }
+      })();
+    }
+
     // Generate token
     const token = generateToken(user._id);
 
@@ -121,7 +160,9 @@ exports.login = async (req, res) => {
       success: true,
       message: 'Login successful',
       token,
-      user: user.toJSON()
+      user: user.toJSON(),
+      leetcodeData: buildLeetCodePayload(cachedStats),
+      leetcodeSyncTriggered: Boolean(shouldSync && username)
     });
   } catch (error) {
     res.status(500).json({

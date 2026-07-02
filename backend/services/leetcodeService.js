@@ -1,4 +1,4 @@
-const { User, LeetCodeStat } = require('../models');
+const { User, LeetCodeStat, LeetcodeStats } = require('../models');
 
 const LEETCODE_GRAPHQL_URL = 'https://leetcode.com/graphql';
 
@@ -84,16 +84,37 @@ const fetchLeetCodeProfile = async (username, { fetchImpl = fetch } = {}) => {
 };
 
 const getStoredLeetCodeProfile = async ({ userId }) => {
-  const leetcodeStat = await LeetCodeStat.findOne({ user: userId });
-  return leetcodeStat ? leetcodeStat.rawProfile : null;
+  const leetcodeStats = await LeetcodeStats.findOne({ userId }).lean();
+  if (leetcodeStats) {
+    return {
+      username: leetcodeStats.username,
+      summary: {
+        totalSolved: leetcodeStats.totalSolved,
+        easySolved: leetcodeStats.easySolved,
+        mediumSolved: leetcodeStats.mediumSolved,
+        hardSolved: leetcodeStats.hardSolved,
+        ranking: leetcodeStats.ranking,
+      },
+      contestRating: leetcodeStats.contestRating,
+      contestHistory: leetcodeStats.contestHistory,
+      recentSubmissions: leetcodeStats.recentSubmissions,
+      badges: leetcodeStats.badges,
+      languageStats: leetcodeStats.languageStats,
+      lastSynced: leetcodeStats.lastSynced,
+    };
+  }
+
+  const legacyStat = await LeetCodeStat.findOne({ user: userId });
+  return legacyStat ? legacyStat.rawProfile : null;
 };
 
 const syncLeetCodeProfile = async ({ userId, username, fetchImpl = fetch }) => {
-  let leetcodeUsername = username;
+  const providedUsername = typeof username === 'string' ? username.trim() : '';
+  let leetcodeUsername = providedUsername;
 
   if (!leetcodeUsername) {
     const user = await User.findById(userId);
-    leetcodeUsername = user?.leetcode;
+    leetcodeUsername = user?.leetcodeUsername || user?.leetcode || '';
   }
 
   if (!leetcodeUsername) {
@@ -102,7 +123,30 @@ const syncLeetCodeProfile = async ({ userId, username, fetchImpl = fetch }) => {
 
   const normalizedProfile = await fetchLeetCodeProfile(leetcodeUsername, { fetchImpl });
 
-  const leetcodeStat = await LeetCodeStat.findOneAndUpdate(
+  const statsPayload = {
+    userId,
+    username: normalizedProfile.username || leetcodeUsername,
+    totalSolved: normalizedProfile.summary.totalSolved,
+    easySolved: normalizedProfile.summary.easySolved,
+    mediumSolved: normalizedProfile.summary.mediumSolved,
+    hardSolved: normalizedProfile.summary.hardSolved,
+    acceptanceRate: 0,
+    ranking: normalizedProfile.summary.ranking,
+    contestRating: 0,
+    contestHistory: [],
+    recentSubmissions: [],
+    badges: [],
+    languageStats: [],
+    lastSynced: new Date(),
+  };
+
+  const leetcodeStats = await LeetcodeStats.findOneAndUpdate(
+    { userId },
+    { $set: statsPayload },
+    { upsert: true, new: true, setDefaultsOnInsert: true }
+  );
+
+  await LeetCodeStat.findOneAndUpdate(
     { user: userId },
     {
       totalSolved: normalizedProfile.summary.totalSolved,
@@ -116,17 +160,38 @@ const syncLeetCodeProfile = async ({ userId, username, fetchImpl = fetch }) => {
     { upsert: true, new: true }
   );
 
-  if (username) {
-    const user = await User.findById(userId);
-    if (user && user.leetcode !== username) {
-      user.leetcode = username;
+  const user = await User.findById(userId);
+  if (user) {
+    if (providedUsername && user.leetcodeUsername !== providedUsername) {
+      user.leetcodeUsername = providedUsername;
+    }
+    if (!user.leetcode && leetcodeUsername) {
+      user.leetcode = leetcodeUsername;
+    }
+    if (user.isModified('leetcodeUsername') || user.isModified('leetcode')) {
       await user.save();
     }
   }
 
   return {
-    leetcodeData: leetcodeStat.rawProfile,
+    leetcodeData: {
+      username: leetcodeStats.username,
+      summary: {
+        totalSolved: leetcodeStats.totalSolved,
+        easySolved: leetcodeStats.easySolved,
+        mediumSolved: leetcodeStats.mediumSolved,
+        hardSolved: leetcodeStats.hardSolved,
+        ranking: leetcodeStats.ranking,
+      },
+      contestRating: leetcodeStats.contestRating,
+      contestHistory: leetcodeStats.contestHistory,
+      recentSubmissions: leetcodeStats.recentSubmissions,
+      badges: leetcodeStats.badges,
+      languageStats: leetcodeStats.languageStats,
+      lastSynced: leetcodeStats.lastSynced,
+    },
     summary: normalizedProfile.summary,
+    stats: leetcodeStats,
   };
 };
 

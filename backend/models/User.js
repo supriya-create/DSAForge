@@ -30,6 +30,24 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: null
     },
+    leetcodeUsername: {
+      type: String,
+      default: null,
+      trim: true,
+      lowercase: true
+    },
+    githubUsername: {
+      type: String,
+      default: null,
+      trim: true,
+      lowercase: true
+    },
+    codeforcesUsername: {
+      type: String,
+      default: null,
+      trim: true,
+      lowercase: true
+    },
     college: {
       type: String,
       default: null

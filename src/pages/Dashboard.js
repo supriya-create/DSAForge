@@ -1,6 +1,8 @@
 import React from 'react';
 import { RadarChart, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'recharts';
 import { useApp } from '../context/AppContext';
+import ContestHistory from '../components/ContestHistory';
+import RecentSubmissions from '../components/RecentSubmissions';
 
 const activityData = [
   { day: 'Mon', solved: 4 }, { day: 'Tue', solved: 7 }, { day: 'Wed', solved: 3 },
@@ -8,10 +10,27 @@ const activityData = [
 ];
 
 const Dashboard = () => {
-  const { user, dsaProgress, totalSolved, streak, leetcodeData, leetcodeLoading, leetcodeError, fetchLeetCodeData } = useApp();
+  const { user, dsaProgress, streak, leetcodeData, leetcodeLoading, leetcodeError, fetchLeetCodeData } = useApp();
 
-  const leetcodeSolved = leetcodeData?.submitStats?.acSubmissionNum?.reduce((sum, entry) => sum + (entry.count || 0), 0) || 0;
-  const leetcodeRank = leetcodeData?.profile?.ranking || 'N/A';
+  const leetcodeUsername = user?.leetcodeUsername || user?.leetcode || null;
+  const totalSolved = leetcodeData?.summary?.totalSolved ?? 0;
+  const easySolved = leetcodeData?.summary?.easySolved ?? 0;
+  const mediumSolved = leetcodeData?.summary?.mediumSolved ?? 0;
+  const hardSolved = leetcodeData?.summary?.hardSolved ?? 0;
+  const acceptanceRate = leetcodeData?.acceptanceRate ?? 0;
+  const ranking = leetcodeData?.summary?.ranking ?? 'N/A';
+  const contestRating = leetcodeData?.contestRating ?? 0;
+  const lastSynced = leetcodeData?.lastSynced ? new Date(leetcodeData.lastSynced).toLocaleString() : 'Not synced yet';
+
+  const hasLeetCodeStats = Boolean(
+    leetcodeData?.summary?.totalSolved ||
+    leetcodeData?.summary?.easySolved ||
+    leetcodeData?.summary?.mediumSolved ||
+    leetcodeData?.summary?.hardSolved ||
+    leetcodeData?.contestRating ||
+    leetcodeData?.summary?.ranking ||
+    leetcodeData?.lastSynced
+  );
 
   const radarData = dsaProgress.slice(0, 8).map(t => ({
     topic: t.topic.split(' ')[0],
@@ -33,19 +52,19 @@ const Dashboard = () => {
               Good morning, {user?.name?.split(' ')[0]} 👋
             </h1>
             <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
-              {user?.college} · {user?.year} · LeetCode: <span style={{ color: 'var(--accent-cyan)' }}>@{user?.leetcode}</span>
+              {user?.college} · {user?.year} · LeetCode: <span style={{ color: 'var(--accent-cyan)' }}>@{leetcodeUsername || 'not set'}</span>
             </p>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '10px', flexWrap: 'wrap' }}>
-              <button onClick={() => fetchLeetCodeData(user?.leetcode)} disabled={!user?.leetcode || leetcodeLoading} style={{
+              <button onClick={() => fetchLeetCodeData(leetcodeUsername)} disabled={!leetcodeUsername || leetcodeLoading} style={{
                 padding: '8px 14px', borderRadius: '999px', border: '1px solid var(--border)',
                 background: leetcodeLoading ? 'rgba(255,255,255,0.08)' : 'rgba(0,212,255,0.08)',
-                color: 'var(--text-primary)', cursor: user?.leetcode ? 'pointer' : 'not-allowed', fontSize: '12px', fontWeight: 700
+                color: 'var(--text-primary)', cursor: leetcodeUsername ? 'pointer' : 'not-allowed', fontSize: '12px', fontWeight: 700
               }}>
                 {leetcodeLoading ? 'Syncing LeetCode…' : 'Sync LeetCode'}
               </button>
               {leetcodeData && (
                 <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                  {leetcodeSolved} solved · Rank {leetcodeRank}
+                  {totalSolved} solved · Rank {ranking}
                 </span>
               )}
             </div>
@@ -63,28 +82,59 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Top Stats Row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '24px' }}>
-        {[
-          { label: 'Total Solved', value: totalSolved, sub: 'problems', color: 'var(--accent-cyan)', icon: '✅' },
-          { label: 'Readiness Score', value: `${overallScore}%`, sub: 'placement ready', color: 'var(--accent-green)', icon: '🏆' },
-          { label: 'Topics Covered', value: dsaProgress.length, sub: 'of 15 topics', color: 'var(--accent-purple)', icon: '📚' },
-          { label: 'This Week', value: activityData.reduce((s, d) => s + d.solved, 0), sub: 'problems solved', color: 'var(--accent-orange)', icon: '⚡' },
-        ].map(stat => (
-          <div key={stat.label} className="card" style={{
-            background: `linear-gradient(135deg, var(--bg-card), var(--bg-card2))`,
-            borderColor: 'var(--border)'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div>
-                <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{stat.label}</div>
-                <div style={{ fontFamily: 'var(--font-display)', fontSize: '32px', fontWeight: 800, color: stat.color }}>{stat.value}</div>
-                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>{stat.sub}</div>
-              </div>
-              <div style={{ fontSize: '24px' }}>{stat.icon}</div>
-            </div>
+      {/* LeetCode Stats */}
+      <div className="card" style={{ marginBottom: '24px', padding: '20px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <div>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: '16px', fontWeight: 700 }}>LeetCode Profile Stats</div>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>Synced from MongoDB-backed profile data</div>
           </div>
-        ))}
+          {leetcodeLoading && <div style={{ fontSize: '12px', color: 'var(--accent-cyan)' }}>Loading…</div>}
+        </div>
+
+        {leetcodeLoading ? (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '12px' }}>
+            {Array.from({ length: 8 }).map((_, index) => (
+              <div key={index} style={{ border: '1px solid var(--border)', borderRadius: '12px', padding: '14px', background: 'rgba(255,255,255,0.03)' }}>
+                <div style={{ height: '10px', width: '55%', background: 'rgba(255,255,255,0.12)', borderRadius: '999px', marginBottom: '10px' }} />
+                <div style={{ height: '22px', width: '70%', background: 'rgba(255,255,255,0.08)', borderRadius: '999px', marginBottom: '8px' }} />
+                <div style={{ height: '10px', width: '40%', background: 'rgba(255,255,255,0.08)', borderRadius: '999px' }} />
+              </div>
+            ))}
+          </div>
+        ) : leetcodeError ? (
+          <div style={{ padding: '16px', borderRadius: '12px', background: 'rgba(239,68,68,0.08)', color: 'var(--accent-pink)', border: '1px solid rgba(239,68,68,0.2)' }}>
+            {leetcodeError}
+          </div>
+        ) : !hasLeetCodeStats ? (
+          <div style={{ padding: '16px', borderRadius: '12px', background: 'rgba(255,255,255,0.04)', color: 'var(--text-secondary)', border: '1px dashed var(--border)' }}>
+            No LeetCode stats are available yet. Sync your profile to populate this dashboard.
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '12px' }}>
+            {[
+              { label: 'Total Solved', value: totalSolved, sub: 'problems', color: 'var(--accent-cyan)', icon: '✅' },
+              { label: 'Easy', value: easySolved, sub: 'easy problems', color: 'var(--accent-green)', icon: '🟢' },
+              { label: 'Medium', value: mediumSolved, sub: 'medium problems', color: 'var(--accent-orange)', icon: '🟠' },
+              { label: 'Hard', value: hardSolved, sub: 'hard problems', color: 'var(--accent-pink)', icon: '🔴' },
+              { label: 'Acceptance Rate', value: `${acceptanceRate}%`, sub: 'accepted submissions', color: 'var(--accent-purple)', icon: '📈' },
+              { label: 'Ranking', value: ranking === 'N/A' ? 'N/A' : `#${ranking}`, sub: 'global rank', color: 'var(--accent-cyan)', icon: '🏅' },
+              { label: 'Contest Rating', value: contestRating, sub: 'contest score', color: 'var(--accent-orange)', icon: '⚡' },
+              { label: 'Last Synced', value: lastSynced, sub: 'latest refresh', color: 'var(--text-secondary)', icon: '🕒' },
+            ].map(stat => (
+              <div key={stat.label} style={{ border: '1px solid var(--border)', borderRadius: '12px', padding: '14px', background: 'rgba(255,255,255,0.03)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{stat.label}</div>
+                    <div style={{ fontFamily: 'var(--font-display)', fontSize: '22px', fontWeight: 800, color: stat.color }}>{stat.value}</div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>{stat.sub}</div>
+                  </div>
+                  <div style={{ fontSize: '20px' }}>{stat.icon}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Charts Row */}
@@ -122,6 +172,9 @@ const Dashboard = () => {
           </ResponsiveContainer>
         </div>
       </div>
+
+      <ContestHistory contestHistory={leetcodeData?.contestHistory || []} />
+      <RecentSubmissions recentSubmissions={leetcodeData?.recentSubmissions || []} />
 
       {/* Strengths and Weaknesses */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '24px' }}>

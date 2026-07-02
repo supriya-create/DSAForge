@@ -39,9 +39,12 @@ export const AppProvider = ({ children }) => {
     setAuthToken(token);
   };
 
-  const login = (userData) => {
+  const login = (userData, leetcodeDataFromAuth = null) => {
     setUser(userData);
     setIsLoggedIn(true);
+    if (leetcodeDataFromAuth) {
+      setLeetCodeData(leetcodeDataFromAuth);
+    }
   };
 
   const logout = () => {
@@ -81,7 +84,7 @@ export const AppProvider = ({ children }) => {
       body: JSON.stringify({ name, email, password })
     });
     setToken(data.token);
-    login(data.user);
+    login(data.user, data.leetcodeData || null);
     return data;
   };
 
@@ -91,7 +94,7 @@ export const AppProvider = ({ children }) => {
       body: JSON.stringify({ email, password })
     });
     setToken(data.token);
-    login(data.user);
+    login(data.user, data.leetcodeData || null);
     return data;
   };
 
@@ -154,7 +157,7 @@ export const AppProvider = ({ children }) => {
     if (!authToken) return;
     try {
       const data = await request('/api/auth/me', { method: 'GET' });
-      login(data.user);
+      login(data.user, null);
     } catch (err) {
       console.warn('Unable to load current user', err.message);
       logout();
@@ -175,10 +178,7 @@ export const AppProvider = ({ children }) => {
             setStreak(data.streak);
           }
 
-          const leetcodeRes = await request('/api/tracker/leetcode', { method: 'GET' });
-          if (leetcodeRes && leetcodeRes.success) {
-            setLeetCodeData(leetcodeRes.leetcodeData);
-          }
+          await loadLeetCodeData();
         } catch (err) {
           console.error('Error fetching tracker data:', err.message);
         }
@@ -249,12 +249,32 @@ export const AppProvider = ({ children }) => {
     }
   };
 
+  const loadLeetCodeData = async () => {
+    setLeetCodeLoading(true);
+    setLeetCodeError(null);
+    try {
+      const data = await request('/api/leetcode', { method: 'GET' });
+      if (data?.success) {
+        setLeetCodeData(data.leetcodeData || null);
+        return data.leetcodeData || null;
+      }
+      return null;
+    } catch (err) {
+      console.error('LeetCode load error', err);
+      setLeetCodeError('Unable to load LeetCode data.');
+      setLeetCodeData(null);
+      return null;
+    } finally {
+      setLeetCodeLoading(false);
+    }
+  };
+
   const fetchLeetCodeData = async (username) => {
     if (!username) return null;
     setLeetCodeLoading(true);
     setLeetCodeError(null);
     try {
-      const data = await request('/api/tracker/leetcode/sync', {
+      const data = await request('/api/leetcode/sync', {
         method: 'POST',
         body: JSON.stringify({ username })
       });
