@@ -1,4 +1,4 @@
-const { User, LeetCodeStat, LeetcodeStats } = require('../models');
+const { User, LeetCodeStat, LeetcodeStats, Streak, DailyActivity } = require('../models');
 
 const LEETCODE_GRAPHQL_URL = 'https://leetcode.com/graphql';
 
@@ -259,6 +259,52 @@ const getStoredLeetCodeProfile = async ({ userId }) => {
   return legacyStat ? legacyStat.rawProfile : null;
 };
 
+const calculateStreakFromSubmissions = (submissions) => {
+  if (!submissions || submissions.length === 0) return 0;
+
+  const uniqueDates = Array.from(new Set(
+    submissions
+      .map(sub => {
+        if (!sub.timestamp) return null;
+        const d = new Date(sub.timestamp);
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      })
+      .filter(Boolean)
+  )).sort((a, b) => new Date(b) - new Date(a));
+
+  if (uniqueDates.length === 0) return 0;
+
+  const today = new Date();
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+
+  const firstDate = uniqueDates[0];
+  if (firstDate !== todayStr && firstDate !== yesterdayStr) {
+    return 0;
+  }
+
+  let currentStreak = 1;
+  let currentRefDate = new Date(firstDate);
+
+  for (let i = 1; i < uniqueDates.length; i++) {
+    const nextDate = new Date(uniqueDates[i]);
+    const diffTime = Math.abs(currentRefDate - nextDate);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 1) {
+      currentStreak++;
+      currentRefDate = nextDate;
+    } else if (diffDays > 1) {
+      break;
+    }
+  }
+
+  return currentStreak;
+};
+
 const syncLeetCodeProfile = async ({ userId, username, fetchImpl = fetch }) => {
   const providedUsername = typeof username === 'string' ? username.trim() : '';
   let leetcodeUsername = providedUsername;
@@ -301,6 +347,59 @@ const syncLeetCodeProfile = async ({ userId, username, fetchImpl = fetch }) => {
     { $set: statsPayload },
     { upsert: true, new: true, setDefaultsOnInsert: true }
   );
+
+  // Sync Streak collection
+  const calculatedStreak = calculateStreakFromSubmissions(normalizedProfile.recentSubmissions);
+  if (calculatedStreak > 0) {
+    const streakDoc = await Streak.findOne({ user: userId });
+    if (streakDoc) {
+      streakDoc.currentStreak = Math.max(streakDoc.currentStreak, calculatedStreak);
+      streakDoc.bestStreak = Math.max(streakDoc.bestStreak, streakDoc.currentStreak);
+      streakDoc.lastActiveDate = new Date();
+      await streakDoc.save();
+    } else {
+      await Streak.create({
+        user: userId,
+        currentStreak: calculatedStreak,
+        bestStreak: calculatedStreak,
+        lastActiveDate: new Date()
+      });
+    }
+  }
+
+  // Populate DailyActivity from submissions
+  const recentSubs = normalizedProfile.recentSubmissions || [];
+  for (const sub of recentSubs) {
+    if (sub.timestamp) {
+      const subDate = new Date(sub.timestamp);
+      subDate.setHours(0, 0, 0, 0);
+
+      // Check if this problem was already recorded in daily activity
+      const activityExists = await DailyActivity.findOne({
+        user: userId,
+        date: subDate,
+        'problemsSolved.problemId': sub.problemId
+      });
+
+      if (!activityExists) {
+        await DailyActivity.findOneAndUpdate(
+          { user: userId, date: subDate },
+          {
+            $inc: { problemsSolvedCount: 1 },
+            $push: {
+              problemsSolved: {
+                problemId: sub.problemId,
+                platform: 'LeetCode',
+                title: sub.problemTitle,
+                difficulty: sub.difficulty
+              }
+            }
+          },
+          { upsert: true, new: true }
+        );
+      }
+    }
+  }
 
   await LeetCodeStat.findOneAndUpdate(
     { user: userId },

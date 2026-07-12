@@ -292,6 +292,18 @@ export const AppProvider = ({ children }) => {
       });
       const userData = data?.leetcodeData || null;
       setLeetCodeData(userData);
+
+      // Trigger a reload of the tracker progress and streak from the backend
+      try {
+        const trackerRes = await request('/api/tracker', { method: 'GET' });
+        if (trackerRes && trackerRes.success) {
+          setDsaProgress(trackerRes.dsaProgress);
+          setStreak(trackerRes.streak);
+        }
+      } catch (trackerErr) {
+        console.error('Error refreshing tracker data after sync:', trackerErr.message);
+      }
+
       return userData;
     } catch (err) {
       console.error('LeetCode fetch error', err);

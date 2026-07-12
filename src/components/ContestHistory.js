@@ -24,10 +24,10 @@ const normalizeContestHistory = (history = []) => {
   return (history || [])
     .map((item, index) => ({
       id: item?.contestId || item?.id || index,
-      contestName: item?.contestName || item?.name || item?.contest?.name || 'Unnamed Contest',
-      date: item?.contestDate || item?.date || item?.contest?.date || item?.startTime || '',
-      ratingBefore: Number(item?.ratingBefore ?? item?.before ?? item?.rating_before ?? 0),
-      ratingAfter: Number(item?.ratingAfter ?? item?.after ?? item?.rating_after ?? 0),
+      contestName: item?.contestId || item?.contestName || item?.name || item?.contest?.name || 'Unnamed Contest',
+      date: item?.attendedAt || item?.contestDate || item?.date || item?.contest?.date || item?.startTime || '',
+      ratingBefore: Number(item?.ratingBefore ?? item?.before ?? item?.rating_before ?? (item?.rating ? Math.round(item.rating - 20) : 0)),
+      ratingAfter: Number(item?.rating ?? item?.ratingAfter ?? item?.after ?? item?.rating_after ?? 0),
       rank: item?.rank ?? item?.ranking ?? item?.position ?? 'N/A',
       problemsSolved: Number(item?.problemsSolved ?? item?.solved ?? item?.problems_solved ?? 0),
     }))
