@@ -144,9 +144,9 @@ const Dashboard = () => {
         </div>
 
         {leetcodeLoading ? (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '12px' }}>
+          <div className="stats-grid">
             {Array.from({ length: 8 }).map((_, index) => (
-              <div key={index} style={{ border: '1px solid var(--border)', borderRadius: '12px', padding: '14px', background: 'rgba(255,255,255,0.03)' }}>
+              <div key={index} className="stat-card" style={{ padding: '14px' }}>
                 <div style={{ height: '10px', width: '55%', background: 'rgba(255,255,255,0.12)', borderRadius: '999px', marginBottom: '10px' }} />
                 <div style={{ height: '22px', width: '70%', background: 'rgba(255,255,255,0.08)', borderRadius: '999px', marginBottom: '8px' }} />
                 <div style={{ height: '10px', width: '40%', background: 'rgba(255,255,255,0.08)', borderRadius: '999px' }} />
@@ -162,7 +162,7 @@ const Dashboard = () => {
             No LeetCode stats are available yet. Sync your profile to populate this dashboard.
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '12px' }}>
+          <div className="stats-grid">
             {[
               { label: 'Total Solved', value: totalSolved, sub: 'problems', color: 'var(--accent-cyan)', icon: '✅' },
               { label: 'Easy', value: easySolved, sub: 'easy problems', color: 'var(--accent-green)', icon: '🟢' },
@@ -173,7 +173,7 @@ const Dashboard = () => {
               { label: 'Contest Rating', value: contestRating, sub: 'contest score', color: 'var(--accent-orange)', icon: '⚡' },
               { label: 'Last Synced', value: lastSynced, sub: 'latest refresh', color: 'var(--text-secondary)', icon: '🕒' },
             ].map(stat => (
-              <div key={stat.label} style={{ border: '1px solid var(--border)', borderRadius: '12px', padding: '14px', background: 'rgba(255,255,255,0.03)' }}>
+              <div key={stat.label} className="stat-card" style={{ padding: '14px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div>
                     <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{stat.label}</div>
@@ -189,7 +189,7 @@ const Dashboard = () => {
       </div>
 
       {/* Charts Row */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '24px' }}>
+      <div className="charts-grid" style={{ marginBottom: '24px' }}>
         {/* Radar Chart */}
         <div className="card">
           <div style={{ fontFamily: 'var(--font-display)', fontSize: '16px', fontWeight: 700, marginBottom: '4px' }}>Topic Mastery</div>
@@ -229,7 +229,7 @@ const Dashboard = () => {
       <RecentSubmissions recentSubmissions={leetcodeData?.recentSubmissions || []} />
 
       {/* Strengths and Weaknesses */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '24px' }}>
+      <div className="strengths-grid" style={{ marginBottom: '24px' }}>
         <div className="card">
           <div style={{ fontSize: '16px', fontFamily: 'var(--font-display)', fontWeight: 700, marginBottom: '16px' }}>💪 Strong Areas</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -274,11 +274,11 @@ const Dashboard = () => {
       <div className="card">
         <div style={{ fontSize: '16px', fontFamily: 'var(--font-display)', fontWeight: 700, marginBottom: '16px' }}>📋 All Topics Overview</div>
         <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <table className="dsa-table">
             <thead>
-              <tr style={{ borderBottom: '1px solid var(--border)' }}>
+              <tr>
                 {['Topic', 'Solved', 'Easy', 'Medium', 'Hard', 'Progress', 'Level'].map(h => (
-                  <th key={h} style={{ textAlign: 'left', padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{h}</th>
+                  <th key={h}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -287,16 +287,14 @@ const Dashboard = () => {
                 const pct = Math.round((t.solved / t.total) * 100);
                 const level = pct >= 70 ? 'strong' : pct >= 40 ? 'moderate' : 'weak';
                 return (
-                  <tr key={t.topic} style={{ borderBottom: '1px solid rgba(30,45,71,0.5)', transition: 'background 0.2s' }}
-                    onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
-                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                    <td style={{ padding: '12px', fontSize: '14px', fontWeight: 500 }}>{t.topic}</td>
-                    <td style={{ padding: '12px', fontFamily: 'var(--font-mono)', fontSize: '14px', color: 'var(--accent-cyan)' }}>{t.solved}</td>
-                    <td style={{ padding: '12px', fontSize: '13px', color: 'var(--accent-green)' }}>{t.easy}</td>
-                    <td style={{ padding: '12px', fontSize: '13px', color: 'var(--accent-orange)' }}>{t.medium}</td>
-                    <td style={{ padding: '12px', fontSize: '13px', color: 'var(--accent-pink)' }}>{t.hard}</td>
-                    <td style={{ padding: '12px', minWidth: '120px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <tr key={t.topic}>
+                    <td style={{ fontWeight: 600 }}>{t.topic}</td>
+                    <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-cyan)', fontWeight: 600 }}>{t.solved}</td>
+                    <td style={{ color: 'var(--accent-green)', fontWeight: 600 }}>{t.easy}</td>
+                    <td style={{ color: 'var(--accent-orange)', fontWeight: 600 }}>{t.medium}</td>
+                    <td style={{ color: 'var(--accent-pink)', fontWeight: 600 }}>{t.hard}</td>
+                    <td style={{ minWidth: '120px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <div className="progress-bar" style={{ flex: 1 }}>
                           <div className="progress-fill" style={{
                             width: `${pct}%`,
@@ -306,7 +304,7 @@ const Dashboard = () => {
                         <span style={{ fontSize: '12px', color: 'var(--text-secondary)', minWidth: 32 }}>{pct}%</span>
                       </div>
                     </td>
-                    <td style={{ padding: '12px' }}><span className={`tag tag-${level}`}>{level}</span></td>
+                    <td><span className={`tag tag-${level}`}>{level}</span></td>
                   </tr>
                 );
               })}

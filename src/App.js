@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
 import AuthPage from './pages/AuthPage';
 import Sidebar from './components/Sidebar';
@@ -14,6 +14,7 @@ import './styles/global.css';
 
 const MainApp = () => {
   const { isLoggedIn, activeTab } = useApp();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   if (!isLoggedIn) return <AuthPage />;
 
@@ -29,13 +30,29 @@ const MainApp = () => {
   };
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-deep)' }}>
-      <Sidebar />
-      <main style={{
-        marginLeft: '240px', flex: 1, padding: '32px',
-        minHeight: '100vh', overflowY: 'auto',
-        background: 'radial-gradient(ellipse at 80% 10%, rgba(0,212,255,0.03) 0%, transparent 50%), radial-gradient(ellipse at 20% 90%, rgba(124,58,237,0.03) 0%, transparent 50%)'
-      }}>
+    <div className="app-container">
+      {/* Mobile Sticky Header */}
+      <div className="mobile-header">
+        <button className="mobile-menu-btn" onClick={() => setSidebarOpen(true)}>
+          ☰
+        </button>
+        <span style={{ fontFamily: 'var(--font-display)', fontSize: '18px', fontWeight: 800 }}>
+          DSA<span className="gradient-text-cyan">Forge</span>
+        </span>
+        <div style={{ width: '40px' }} /> {/* balancer spacing */}
+      </div>
+
+      {/* Sidebar mobile overlay */}
+      <div 
+        className={`sidebar-overlay ${sidebarOpen ? 'show' : ''}`} 
+        onClick={() => setSidebarOpen(false)}
+      />
+
+      {/* Sidebar Navigation */}
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+
+      {/* Main Page Content */}
+      <main className="main-content">
         {pages[activeTab] || <Dashboard />}
       </main>
     </div>

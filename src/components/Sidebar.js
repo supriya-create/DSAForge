@@ -12,79 +12,91 @@ const navItems = [
   { id: 'doubt', icon: '🤖', label: 'AI Doubts' },
 ];
 
-const Sidebar = () => {
+const Sidebar = ({ isOpen, onClose }) => {
   const { user, activeTab, setActiveTab, logout, streak, totalSolved } = useApp();
 
+  const handleTabClick = (id) => {
+    setActiveTab(id);
+    if (onClose) onClose(); // close sidebar drawer on mobile after clicking
+  };
+
   return (
-    <div style={{
-      width: '240px', minHeight: '100vh', background: 'var(--bg-card)',
-      borderRight: '1px solid var(--border)', display: 'flex',
-      flexDirection: 'column', position: 'fixed', left: 0, top: 0, zIndex: 100
-    }}>
+    <div className={`sidebar ${isOpen ? 'open' : ''}`}>
       {/* Logo */}
-      <div style={{ padding: '24px 20px', borderBottom: '1px solid var(--border)' }}>
+      <div style={{ padding: '24px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <div style={{
             width: 38, height: 38, borderRadius: '10px',
             background: 'linear-gradient(135deg, var(--accent-cyan), var(--accent-purple))',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px'
+            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px',
+            boxShadow: 'var(--glow-cyan)'
           }}>⚡</div>
-          <span style={{ fontFamily: 'var(--font-display)', fontSize: '20px', fontWeight: 800 }}>
+          <span style={{ fontFamily: 'var(--font-display)', fontSize: '20px', fontWeight: 800, letterSpacing: '-0.5px' }}>
             DSA<span className="gradient-text-cyan">Forge</span>
           </span>
         </div>
+        {/* Mobile close button */}
+        <button onClick={onClose} className="mobile-close-btn" id="close-sidebar-mobile">
+          ✕
+        </button>
       </div>
 
       {/* Nav */}
-      <nav style={{ flex: 1, padding: '16px 12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+      <nav style={{ flex: 1, padding: '20px 12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
         {navItems.map(item => (
-          <button key={item.id} onClick={() => setActiveTab(item.id)} style={{
-            display: 'flex', alignItems: 'center', gap: '12px',
-            padding: '10px 12px', borderRadius: '10px', border: 'none',
-            background: activeTab === item.id
-              ? 'linear-gradient(135deg, rgba(0,212,255,0.15), rgba(124,58,237,0.15))'
-              : 'transparent',
-            color: activeTab === item.id ? 'var(--accent-cyan)' : 'var(--text-secondary)',
-            cursor: 'pointer', fontSize: '14px', fontWeight: activeTab === item.id ? 600 : 400,
-            fontFamily: 'var(--font-body)', transition: 'all 0.2s',
-            borderLeft: activeTab === item.id ? '2px solid var(--accent-cyan)' : '2px solid transparent',
-            width: '100%', textAlign: 'left'
-          }}>
+          <button
+            key={item.id}
+            onClick={() => handleTabClick(item.id)}
+            className={`sidebar-nav-btn ${activeTab === item.id ? 'active' : ''}`}
+          >
             <span style={{ fontSize: '16px' }}>{item.icon}</span>
-            {item.label}
+            <span>{item.label}</span>
           </button>
         ))}
       </nav>
 
       {/* Stats mini */}
-      <div style={{ padding: '12px', margin: '0 12px', marginBottom: '8px', background: 'var(--bg-card2)', borderRadius: '12px', border: '1px solid var(--border)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+      <div style={{
+        padding: '16px 12px',
+        margin: '0 12px 16px 12px',
+        background: 'var(--bg-card2)',
+        borderRadius: '16px',
+        border: '1px solid var(--border)',
+        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.03)'
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center' }}>
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '18px', fontWeight: 700, color: 'var(--accent-cyan)' }}>{totalSolved}</div>
-            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Solved</div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '18px', fontWeight: 800, color: 'var(--accent-cyan)' }}>{totalSolved}</div>
+            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 500, marginTop: '2px' }}>Solved</div>
           </div>
+          <div style={{ width: '1px', height: '24px', background: 'var(--border)' }}></div>
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '18px', fontWeight: 700, color: 'var(--accent-orange)' }}>{streak}🔥</div>
-            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Streak</div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '18px', fontWeight: 800, color: 'var(--accent-orange)' }}>{streak}🔥</div>
+            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 500, marginTop: '2px' }}>Streak</div>
           </div>
         </div>
       </div>
 
-      {/* User */}
-      <div style={{ padding: '16px 12px', borderTop: '1px solid var(--border)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+      {/* User Info */}
+      <div style={{ padding: '20px 16px', borderTop: '1px solid var(--border)', background: 'rgba(0,0,0,0.15)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px' }}>
           <div style={{
-            width: 36, height: 36, borderRadius: '50%',
+            width: 40, height: 40, borderRadius: '50%',
             background: 'linear-gradient(135deg, var(--accent-purple), var(--accent-pink))',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontWeight: 700, fontSize: '15px', flexShrink: 0
+            fontWeight: 700, fontSize: '16px', flexShrink: 0,
+            boxShadow: '0 4px 10px rgba(157, 78, 221, 0.2)'
           }}>{user?.avatar}</div>
           <div style={{ overflow: 'hidden' }}>
-            <div style={{ fontSize: '13px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.name}</div>
-            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{user?.college}</div>
+            <div style={{ fontSize: '14px', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text-primary)' }}>
+              {user?.name}
+            </div>
+            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {user?.college}
+            </div>
           </div>
         </div>
-        <button onClick={logout} className="btn-ghost" style={{ width: '100%', fontSize: '13px', padding: '8px' }}>
+        <button onClick={logout} className="btn-ghost" style={{ width: '100%', fontSize: '13px', padding: '10px', borderRadius: '10px' }}>
           Sign Out
         </button>
       </div>
