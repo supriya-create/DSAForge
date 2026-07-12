@@ -4,9 +4,8 @@ import { useApp } from '../context/AppContext';
 import ContestHistory from '../components/ContestHistory';
 import RecentSubmissions from '../components/RecentSubmissions';
 import SubmissionHeatmap from '../components/SubmissionHeatmap';
-
 const Dashboard = () => {
-  const { user, dsaProgress, streak, leetcodeData, leetcodeLoading, leetcodeError, fetchLeetCodeData, updateProfile } = useApp();
+  const { user, dsaProgress, streak, weeklyActivity, leetcodeData, leetcodeLoading, leetcodeError, fetchLeetCodeData, updateProfile } = useApp();
 
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [profileForm, setProfileForm] = useState({
@@ -17,31 +16,6 @@ const Dashboard = () => {
   });
   const [editError, setEditError] = useState('');
   const [editSaving, setEditSaving] = useState(false);
-
-  const activityData = useMemo(() => {
-    const recentSubs = leetcodeData?.recentSubmissions || [];
-    const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const dayCounts = { Sun: 0, Mon: 0, Tue: 0, Wed: 0, Thu: 0, Fri: 0, Sat: 0 };
-
-    recentSubs.forEach(sub => {
-      if (sub.timestamp) {
-        const date = new Date(sub.timestamp);
-        const dayName = daysOfWeek[date.getDay()];
-        dayCounts[dayName] = (dayCounts[dayName] || 0) + 1;
-      }
-    });
-
-    const totalSubs = recentSubs.length;
-    return [
-      { day: 'Mon', solved: totalSubs > 0 ? dayCounts['Mon'] : 4 },
-      { day: 'Tue', solved: totalSubs > 0 ? dayCounts['Tue'] : 7 },
-      { day: 'Wed', solved: totalSubs > 0 ? dayCounts['Wed'] : 3 },
-      { day: 'Thu', solved: totalSubs > 0 ? dayCounts['Thu'] : 9 },
-      { day: 'Fri', solved: totalSubs > 0 ? dayCounts['Fri'] : 5 },
-      { day: 'Sat', solved: totalSubs > 0 ? dayCounts['Sat'] : 11 },
-      { day: 'Sun', solved: totalSubs > 0 ? dayCounts['Sun'] : 6 },
-    ];
-  }, [leetcodeData]);
 
   const handleOpenEdit = () => {
     setProfileForm({
@@ -234,7 +208,7 @@ const Dashboard = () => {
           <div style={{ fontFamily: 'var(--font-display)', fontSize: '16px', fontWeight: 700, marginBottom: '4px' }}>Weekly Activity</div>
           <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>Problems solved this week</div>
           <ResponsiveContainer width="100%" height={240}>
-            <AreaChart data={activityData}>
+            <AreaChart data={weeklyActivity}>
               <defs>
                 <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="#00D4FF" stopOpacity={0.3} />

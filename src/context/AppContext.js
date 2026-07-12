@@ -24,7 +24,16 @@ export const AppProvider = ({ children }) => {
 
   const [dsaProgress, setDsaProgress] = useState(DEFAULT_TOPICS);
 
-  const [streak, setStreak] = useState(7);
+  const [streak, setStreak] = useState(0);
+  const [weeklyActivity, setWeeklyActivity] = useState([
+    { day: 'Mon', solved: 0 },
+    { day: 'Tue', solved: 0 },
+    { day: 'Wed', solved: 0 },
+    { day: 'Thu', solved: 0 },
+    { day: 'Fri', solved: 0 },
+    { day: 'Sat', solved: 0 },
+    { day: 'Sun', solved: 0 }
+  ]);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [leetcodeData, setLeetCodeData] = useState(null);
   const [leetcodeLoading, setLeetCodeLoading] = useState(false);
@@ -53,7 +62,16 @@ export const AppProvider = ({ children }) => {
     setAuthToken(null);
     localStorage.removeItem('authToken');
     setDsaProgress(DEFAULT_TOPICS);
-    setStreak(7);
+    setStreak(0);
+    setWeeklyActivity([
+      { day: 'Mon', solved: 0 },
+      { day: 'Tue', solved: 0 },
+      { day: 'Wed', solved: 0 },
+      { day: 'Thu', solved: 0 },
+      { day: 'Fri', solved: 0 },
+      { day: 'Sat', solved: 0 },
+      { day: 'Sun', solved: 0 }
+    ]);
     setLeetCodeData(null);
     setActiveTab('dashboard');
   };
@@ -188,6 +206,9 @@ export const AppProvider = ({ children }) => {
           if (data && data.success) {
             setDsaProgress(data.dsaProgress);
             setStreak(data.streak);
+            if (data.weeklyActivity) {
+              setWeeklyActivity(data.weeklyActivity);
+            }
           }
 
           await loadLeetCodeData();
@@ -299,6 +320,9 @@ export const AppProvider = ({ children }) => {
         if (trackerRes && trackerRes.success) {
           setDsaProgress(trackerRes.dsaProgress);
           setStreak(trackerRes.streak);
+          if (trackerRes.weeklyActivity) {
+            setWeeklyActivity(trackerRes.weeklyActivity);
+          }
         }
       } catch (trackerErr) {
         console.error('Error refreshing tracker data after sync:', trackerErr.message);
@@ -361,10 +385,11 @@ export const AppProvider = ({ children }) => {
     generateMockOA, fetchLatestMockOA, generateProblems, fetchLatestProblems,
     dsaProgress: computedDsaProgress, updateProgress, addTopic,
     streak, setStreak: updateStreak,
+    weeklyActivity,
     activeTab, setActiveTab,
     totalSolved,
     leetcodeData, leetcodeLoading, leetcodeError, fetchLeetCodeData
-  }), [user, isLoggedIn, login, logout, authToken, registerUser, loginUser, updateProfile, runAIAnalysis, solveAIDoubt, generateAIRoadmap, fetchLatestAIAnalysis, fetchDoubtHistory, fetchLatestRoadmap, generateMockOA, fetchLatestMockOA, generateProblems, fetchLatestProblems, computedDsaProgress, updateProgress, addTopic, updateStreak, activeTab, totalSolved, leetcodeData, leetcodeLoading, leetcodeError, fetchLeetCodeData]);
+  }), [user, isLoggedIn, login, logout, authToken, registerUser, loginUser, updateProfile, runAIAnalysis, solveAIDoubt, generateAIRoadmap, fetchLatestAIAnalysis, fetchDoubtHistory, fetchLatestRoadmap, generateMockOA, fetchLatestMockOA, generateProblems, fetchLatestProblems, computedDsaProgress, updateProgress, addTopic, updateStreak, weeklyActivity, activeTab, setActiveTab, totalSolved, leetcodeData, leetcodeLoading, leetcodeError, fetchLeetCodeData]);
 
   return (
     <AppContext.Provider value={value}>

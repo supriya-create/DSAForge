@@ -350,21 +350,21 @@ const syncLeetCodeProfile = async ({ userId, username, fetchImpl = fetch }) => {
 
   // Sync Streak collection
   const calculatedStreak = calculateStreakFromSubmissions(normalizedProfile.recentSubmissions);
-  if (calculatedStreak > 0) {
-    const streakDoc = await Streak.findOne({ user: userId });
-    if (streakDoc) {
-      streakDoc.currentStreak = Math.max(streakDoc.currentStreak, calculatedStreak);
-      streakDoc.bestStreak = Math.max(streakDoc.bestStreak, streakDoc.currentStreak);
+  const streakDoc = await Streak.findOne({ user: userId });
+  if (streakDoc) {
+    streakDoc.currentStreak = calculatedStreak;
+    streakDoc.bestStreak = Math.max(streakDoc.bestStreak, calculatedStreak);
+    if (calculatedStreak > 0) {
       streakDoc.lastActiveDate = new Date();
-      await streakDoc.save();
-    } else {
-      await Streak.create({
-        user: userId,
-        currentStreak: calculatedStreak,
-        bestStreak: calculatedStreak,
-        lastActiveDate: new Date()
-      });
     }
+    await streakDoc.save();
+  } else {
+    await Streak.create({
+      user: userId,
+      currentStreak: calculatedStreak,
+      bestStreak: calculatedStreak,
+      lastActiveDate: calculatedStreak > 0 ? new Date() : null
+    });
   }
 
   // Populate DailyActivity from submissions

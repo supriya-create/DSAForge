@@ -37,9 +37,26 @@ exports.getTrackerData = async (req, res) => {
     if (!streakDoc) {
       streakDoc = await Streak.create({
         user: userId,
-        currentStreak: 7, // Seed with default 7 days to match layout
-        bestStreak: 7,
-        lastActiveDate: new Date()
+        currentStreak: 0,
+        bestStreak: 0,
+        lastActiveDate: null
+      });
+    }
+
+    // Fetch weekly activity (last 7 days)
+    const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const weeklyActivity = [];
+    
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      d.setHours(0, 0, 0, 0);
+      
+      const dayName = daysOfWeek[d.getDay()];
+      const activity = await DailyActivity.findOne({ user: userId, date: d });
+      weeklyActivity.push({
+        day: dayName,
+        solved: activity ? activity.problemsSolvedCount : 0
       });
     }
 
@@ -53,7 +70,8 @@ exports.getTrackerData = async (req, res) => {
         hard: t.hard,
         total: t.total
       })),
-      streak: streakDoc.currentStreak
+      streak: streakDoc.currentStreak,
+      weeklyActivity
     });
   } catch (error) {
     res.status(500).json({
