@@ -12,7 +12,7 @@ const leetCodeStatSchema = new mongoose.Schema(
     lastSyncedAt: { type: Date, default: null },
     rawProfile: { type: mongoose.Schema.Types.Mixed }
   },
-  { timestamps: true }
+  { timestamps: true, collection: 'leetcodestats_legacy' }
 );
 
 module.exports = mongoose.model('LeetCodeStat', leetCodeStatSchema);
