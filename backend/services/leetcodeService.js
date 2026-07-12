@@ -40,7 +40,7 @@ const isTransientStatus = (status) => {
 };
 
 const buildLeetCodeQuery = () => `
-  query userProfile($username: String!) {
+  query leetcodeStats($username: String!) {
     matchedUser(username: $username) {
       username
       profile {
@@ -56,15 +56,66 @@ const buildLeetCodeQuery = () => `
         }
       }
     }
+    userContestRanking(username: $username) {
+      attendedContestsCount
+      rating
+      globalRanking
+      totalParticipants
+      topPercentage
+    }
+    userContestRankingHistory(username: $username) {
+      attended
+      trendDirection
+      problemsSolved
+      totalProblems
+      finishTimeInSeconds
+      rating
+      ranking
+      contest {
+        title
+        startTime
+      }
+    }
+    recentAcSubmissionList(username: $username, limit: 15) {
+      id
+      title
+      titleSlug
+      timestamp
+    }
   }
 `;
 
-const normalizeLeetCodeProfile = (matchedUser) => {
+const normalizeLeetCodeProfile = (data) => {
+  const matchedUser = data?.matchedUser;
+  const contestRanking = data?.userContestRanking;
+  const contestHistory = data?.userContestRankingHistory || [];
+  const recentSubmissions = data?.recentAcSubmissionList || [];
+
   const submissions = matchedUser?.submitStats?.acSubmissionNum || [];
   const easyCount = submissions.find((entry) => entry.difficulty === 'Easy')?.count || 0;
   const mediumCount = submissions.find((entry) => entry.difficulty === 'Medium')?.count || 0;
   const hardCount = submissions.find((entry) => entry.difficulty === 'Hard')?.count || 0;
   const totalCount = submissions.find((entry) => entry.difficulty === 'All')?.count || (easyCount + mediumCount + hardCount);
+
+  // Map contest history
+  const mappedContestHistory = contestHistory
+    .filter(item => item.attended && item.contest)
+    .map(item => ({
+      contestId: item.contest.title || '',
+      rank: item.ranking || 0,
+      rating: Math.round(item.rating) || 0,
+      attendedAt: item.contest.startTime ? new Date(item.contest.startTime * 1000) : new Date()
+    }));
+
+  // Map recent submissions
+  const mappedRecentSubmissions = recentSubmissions.map(item => ({
+    problemTitle: item.title || '',
+    problemId: item.id || item.titleSlug || '',
+    difficulty: 'Medium', // Default since recentAcSubmissionList doesn't return difficulty
+    status: 'Accepted',
+    timestamp: item.timestamp ? new Date(item.timestamp * 1000) : new Date(),
+    language: 'C++' // Default
+  }));
 
   return {
     username: matchedUser?.username || null,
@@ -77,6 +128,11 @@ const normalizeLeetCodeProfile = (matchedUser) => {
       hardSolved: hardCount,
       ranking: matchedUser?.profile?.ranking || null,
     },
+    contestRating: contestRanking ? Math.round(contestRanking.rating) : 0,
+    contestHistory: mappedContestHistory,
+    recentSubmissions: mappedRecentSubmissions,
+    badges: [],
+    languageStats: []
   };
 };
 
@@ -136,13 +192,13 @@ const fetchLeetCodeProfile = async (username, { fetchImpl = fetch } = {}) => {
           throw new AppError(502, `LeetCode API returned status ${status}`);
         }
 
-        const data = await response.json();
-        const matchedUser = data?.data?.matchedUser;
+        const resData = await response.json();
+        const matchedUser = resData?.data?.matchedUser;
         if (!matchedUser) {
           throw new AppError(404, `LeetCode user \"${username}\" not found`);
         }
 
-        const normalized = normalizeLeetCodeProfile(matchedUser);
+        const normalized = normalizeLeetCodeProfile(resData.data);
         // Cache result
         cache.set(username, { data: normalized, expiresAt: Date.now() + CACHE_TTL_MS });
         log('info', 'fetch_success', { username });
@@ -232,11 +288,11 @@ const syncLeetCodeProfile = async ({ userId, username, fetchImpl = fetch }) => {
     hardSolved: normalizedProfile.summary.hardSolved || 0,
     acceptanceRate: 0,
     ranking: normalizedProfile.summary.ranking || null,
-    contestRating: 0,
-    contestHistory: [],
-    recentSubmissions: [],
-    badges: [],
-    languageStats: [],
+    contestRating: normalizedProfile.contestRating || 0,
+    contestHistory: normalizedProfile.contestHistory || [],
+    recentSubmissions: normalizedProfile.recentSubmissions || [],
+    badges: normalizedProfile.badges || [],
+    languageStats: normalizedProfile.languageStats || [],
     lastSynced: new Date(),
   };
 

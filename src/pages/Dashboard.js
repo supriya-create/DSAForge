@@ -1,14 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { RadarChart, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'recharts';
 import { useApp } from '../context/AppContext';
 import ContestHistory from '../components/ContestHistory';
 import RecentSubmissions from '../components/RecentSubmissions';
 import SubmissionHeatmap from '../components/SubmissionHeatmap';
-
-const activityData = [
-  { day: 'Mon', solved: 4 }, { day: 'Tue', solved: 7 }, { day: 'Wed', solved: 3 },
-  { day: 'Thu', solved: 9 }, { day: 'Fri', solved: 5 }, { day: 'Sat', solved: 11 }, { day: 'Sun', solved: 6 },
-];
 
 const Dashboard = () => {
   const { user, dsaProgress, streak, leetcodeData, leetcodeLoading, leetcodeError, fetchLeetCodeData, updateProfile } = useApp();
@@ -22,6 +17,31 @@ const Dashboard = () => {
   });
   const [editError, setEditError] = useState('');
   const [editSaving, setEditSaving] = useState(false);
+
+  const activityData = useMemo(() => {
+    const recentSubs = leetcodeData?.recentSubmissions || [];
+    const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const dayCounts = { Sun: 0, Mon: 0, Tue: 0, Wed: 0, Thu: 0, Fri: 0, Sat: 0 };
+
+    recentSubs.forEach(sub => {
+      if (sub.timestamp) {
+        const date = new Date(sub.timestamp);
+        const dayName = daysOfWeek[date.getDay()];
+        dayCounts[dayName] = (dayCounts[dayName] || 0) + 1;
+      }
+    });
+
+    const totalSubs = recentSubs.length;
+    return [
+      { day: 'Mon', solved: totalSubs > 0 ? dayCounts['Mon'] : 4 },
+      { day: 'Tue', solved: totalSubs > 0 ? dayCounts['Tue'] : 7 },
+      { day: 'Wed', solved: totalSubs > 0 ? dayCounts['Wed'] : 3 },
+      { day: 'Thu', solved: totalSubs > 0 ? dayCounts['Thu'] : 9 },
+      { day: 'Fri', solved: totalSubs > 0 ? dayCounts['Fri'] : 5 },
+      { day: 'Sat', solved: totalSubs > 0 ? dayCounts['Sat'] : 11 },
+      { day: 'Sun', solved: totalSubs > 0 ? dayCounts['Sun'] : 6 },
+    ];
+  }, [leetcodeData]);
 
   const handleOpenEdit = () => {
     setProfileForm({

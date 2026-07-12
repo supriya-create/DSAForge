@@ -303,7 +303,43 @@ export const AppProvider = ({ children }) => {
     }
   };
 
-  const totalSolved = dsaProgress.reduce((sum, t) => sum + t.solved, 0);
+  const computedDsaProgress = useMemo(() => {
+    if (!leetcodeData || !leetcodeData.summary) {
+      return dsaProgress;
+    }
+
+    const { easySolved, mediumSolved, hardSolved } = leetcodeData.summary;
+    if (!easySolved && !mediumSolved && !hardSolved) {
+      return dsaProgress;
+    }
+
+    // Proportional allocation based on DEFAULT_TOPICS
+    // Easy: 86 total
+    // Medium: 56 total
+    // Hard: 15 total
+    return dsaProgress.map(item => {
+      const defaultItem = DEFAULT_TOPICS.find(t => t.topic === item.topic) || item;
+      
+      const easyAllocated = Math.round(easySolved * (defaultItem.easy / 86));
+      const mediumAllocated = Math.round(mediumSolved * (defaultItem.medium / 56));
+      const hardAllocated = Math.round(hardSolved * (defaultItem.hard / 15));
+      const solvedAllocated = easyAllocated + mediumAllocated + hardAllocated;
+      
+      // Scale total topic problems proportionally
+      const scaledTotal = Math.max(solvedAllocated + 10, defaultItem.total);
+      
+      return {
+        topic: item.topic,
+        solved: solvedAllocated,
+        easy: easyAllocated,
+        medium: mediumAllocated,
+        hard: hardAllocated,
+        total: scaledTotal
+      };
+    });
+  }, [dsaProgress, leetcodeData]);
+
+  const totalSolved = computedDsaProgress.reduce((sum, t) => sum + t.solved, 0);
 
   const value = useMemo(() => ({
     user, isLoggedIn, login, logout,
@@ -311,12 +347,12 @@ export const AppProvider = ({ children }) => {
     runAIAnalysis, solveAIDoubt, generateAIRoadmap,
     fetchLatestAIAnalysis, fetchDoubtHistory, fetchLatestRoadmap,
     generateMockOA, fetchLatestMockOA, generateProblems, fetchLatestProblems,
-    dsaProgress, updateProgress, addTopic,
+    dsaProgress: computedDsaProgress, updateProgress, addTopic,
     streak, setStreak: updateStreak,
     activeTab, setActiveTab,
     totalSolved,
     leetcodeData, leetcodeLoading, leetcodeError, fetchLeetCodeData
-  }), [user, isLoggedIn, login, logout, authToken, registerUser, loginUser, updateProfile, runAIAnalysis, solveAIDoubt, generateAIRoadmap, fetchLatestAIAnalysis, fetchDoubtHistory, fetchLatestRoadmap, generateMockOA, fetchLatestMockOA, generateProblems, fetchLatestProblems, dsaProgress, updateProgress, addTopic, updateStreak, activeTab, totalSolved, leetcodeData, leetcodeLoading, leetcodeError, fetchLeetCodeData]);
+  }), [user, isLoggedIn, login, logout, authToken, registerUser, loginUser, updateProfile, runAIAnalysis, solveAIDoubt, generateAIRoadmap, fetchLatestAIAnalysis, fetchDoubtHistory, fetchLatestRoadmap, generateMockOA, fetchLatestMockOA, generateProblems, fetchLatestProblems, computedDsaProgress, updateProgress, addTopic, updateStreak, activeTab, totalSolved, leetcodeData, leetcodeLoading, leetcodeError, fetchLeetCodeData]);
 
   return (
     <AppContext.Provider value={value}>
