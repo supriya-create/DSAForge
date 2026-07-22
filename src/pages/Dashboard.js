@@ -4,6 +4,7 @@ import { useApp } from '../context/AppContext';
 import ContestHistory from '../components/ContestHistory';
 import RecentSubmissions from '../components/RecentSubmissions';
 import SubmissionHeatmap from '../components/SubmissionHeatmap';
+
 const Dashboard = () => {
   const { user, dsaProgress, streak, weeklyActivity, leetcodeData, leetcodeLoading, leetcodeError, fetchLeetCodeData, updateProfile } = useApp();
 
@@ -71,23 +72,21 @@ const Dashboard = () => {
   const topStrong = [...dsaProgress].sort((a, b) => (b.solved / b.total) - (a.solved / a.total)).slice(0, 3);
   const topWeak = [...dsaProgress].sort((a, b) => (a.solved / a.total) - (b.solved / b.total)).slice(0, 3);
 
-  const overallScore = Math.round(dsaProgress.reduce((acc, t) => acc + (t.solved / t.total), 0) / dsaProgress.length * 100);
-
   return (
     <div className="animate-fadeIn">
       {/* Header */}
-      <div style={{ marginBottom: '28px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div className="mb-28">
+        <div className="flex-row-between flex-wrap gap-16">
           <div>
-            <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '28px', fontWeight: 800, marginBottom: '4px' }}>
+            <h1 className="mb-4" style={{ fontFamily: 'var(--font-display)', fontSize: '30px', fontWeight: 800 }}>
               Good morning, {user?.name?.split(' ')[0]} 👋
             </h1>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <p className="flex-align-center gap-8 flex-wrap" style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
               <span>{user?.college || 'No college'}</span>
               <span>·</span>
               <span>{user?.year || 'No year'}</span>
               <span>·</span>
-              <span>LeetCode: <span style={{ color: 'var(--accent-cyan)' }}>@{leetcodeUsername || 'not set'}</span></span>
+              <span>LeetCode: <span style={{ color: 'var(--accent-cyan)', fontWeight: 600 }}>@{leetcodeUsername || 'not set'}</span></span>
               <button 
                 onClick={handleOpenEdit} 
                 style={{ 
@@ -99,88 +98,99 @@ const Dashboard = () => {
                   padding: 0,
                   display: 'inline-flex',
                   alignItems: 'center',
-                  textDecoration: 'underline'
+                  textDecoration: 'underline',
+                  fontWeight: 600
                 }}
               >
                 (Edit Profile)
               </button>
             </p>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '10px', flexWrap: 'wrap' }}>
-              <button onClick={() => fetchLeetCodeData(leetcodeUsername)} disabled={!leetcodeUsername || leetcodeLoading} style={{
-                padding: '8px 14px', borderRadius: '999px', border: '1px solid var(--border)',
-                background: leetcodeLoading ? 'rgba(255,255,255,0.08)' : 'rgba(0,212,255,0.08)',
-                color: 'var(--text-primary)', cursor: leetcodeUsername ? 'pointer' : 'not-allowed', fontSize: '12px', fontWeight: 700
-              }}>
+            <div className="flex-align-center gap-10 mt-12 flex-wrap">
+              <button 
+                onClick={() => fetchLeetCodeData(leetcodeUsername)} 
+                disabled={!leetcodeUsername || leetcodeLoading} 
+                className="btn-ghost"
+                style={{
+                  padding: '8px 16px', 
+                  borderRadius: '99px',
+                  borderColor: leetcodeUsername ? 'rgba(0, 242, 254, 0.3)' : 'var(--border)',
+                  color: leetcodeUsername ? 'var(--accent-cyan)' : 'var(--text-secondary)',
+                  fontWeight: 700,
+                  fontSize: '12px',
+                  background: leetcodeLoading ? 'rgba(255,255,255,0.04)' : 'rgba(0, 242, 254, 0.05)'
+                }}
+              >
                 {leetcodeLoading ? 'Syncing LeetCode…' : 'Sync LeetCode'}
               </button>
               {leetcodeData && (
-                <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                <span style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 500 }}>
                   {totalSolved} solved · Rank {ranking}
                 </span>
               )}
             </div>
             {leetcodeError && (
-              <div style={{ marginTop: '8px', fontSize: '12px', color: 'var(--accent-pink)' }}>{leetcodeError}</div>
+              <div className="mt-8" style={{ fontSize: '12px', color: 'var(--accent-pink)', fontWeight: 500 }}>{leetcodeError}</div>
             )}
           </div>
-          <div style={{
-            background: 'rgba(255,107,53,0.1)', border: '1px solid rgba(255,107,53,0.3)',
-            borderRadius: '12px', padding: '12px 20px', textAlign: 'center'
+          <div className="text-center" style={{
+            background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.25)',
+            borderRadius: '16px', padding: '12px 24px', boxShadow: '0 4px 20px rgba(245,158,11,0.05)'
           }}>
-            <div style={{ fontSize: '28px' }}>{streak}🔥</div>
-            <div style={{ fontSize: '12px', color: 'var(--accent-orange)', fontWeight: 600 }}>Day Streak</div>
+            <div style={{ fontSize: '32px', fontWeight: 800 }}>{streak}🔥</div>
+            <div style={{ fontSize: '12px', color: 'var(--accent-orange)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: '2px' }}>Day Streak</div>
           </div>
         </div>
       </div>
 
       {/* LeetCode Stats */}
-      <div className="card" style={{ marginBottom: '24px', padding: '20px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+      <div className="card mb-24" style={{ padding: '24px' }}>
+        <div className="flex-row-between mb-16 flex-wrap gap-12">
           <div>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: '16px', fontWeight: 700 }}>LeetCode Profile Stats</div>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>Synced from MongoDB-backed profile data</div>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: '17px', fontWeight: 800 }}>LeetCode Profile Stats</div>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>Synchronized profile records from backend</div>
           </div>
-          {leetcodeLoading && <div style={{ fontSize: '12px', color: 'var(--accent-cyan)' }}>Loading…</div>}
+          {leetcodeLoading && <div className="animate-pulse" style={{ fontSize: '13px', color: 'var(--accent-cyan)', fontWeight: 600 }}>Syncing...</div>}
         </div>
 
         {leetcodeLoading ? (
           <div className="stats-grid">
             {Array.from({ length: 8 }).map((_, index) => (
-              <div key={index} className="stat-card" style={{ padding: '14px' }}>
-                <div style={{ height: '10px', width: '55%', background: 'rgba(255,255,255,0.12)', borderRadius: '999px', marginBottom: '10px' }} />
-                <div style={{ height: '22px', width: '70%', background: 'rgba(255,255,255,0.08)', borderRadius: '999px', marginBottom: '8px' }} />
-                <div style={{ height: '10px', width: '40%', background: 'rgba(255,255,255,0.08)', borderRadius: '999px' }} />
+              <div key={index} className="stat-card animate-pulse" style={{ padding: '18px' }}>
+                <div style={{ height: '10px', width: '55%', background: 'rgba(255,255,255,0.08)', borderRadius: '999px', marginBottom: '12px' }} />
+                <div style={{ height: '24px', width: '70%', background: 'rgba(255,255,255,0.05)', borderRadius: '999px', marginBottom: '8px' }} />
+                <div style={{ height: '10px', width: '40%', background: 'rgba(255,255,255,0.05)', borderRadius: '999px' }} />
               </div>
             ))}
           </div>
         ) : leetcodeError ? (
-          <div style={{ padding: '16px', borderRadius: '12px', background: 'rgba(239,68,68,0.08)', color: 'var(--accent-pink)', border: '1px solid rgba(239,68,68,0.2)' }}>
-            {leetcodeError}
+          <div style={{ padding: '18px', borderRadius: '14px', background: 'rgba(239,68,68,0.06)', color: 'var(--accent-pink)', border: '1px solid rgba(239,68,68,0.15)', fontSize: '14px' }}>
+            ⚠️ {leetcodeError}
           </div>
         ) : !hasLeetCodeStats ? (
-          <div style={{ padding: '16px', borderRadius: '12px', background: 'rgba(255,255,255,0.04)', color: 'var(--text-secondary)', border: '1px dashed var(--border)' }}>
+          <div className="text-center" style={{ padding: '32px', borderRadius: '16px', background: 'rgba(255,255,255,0.01)', color: 'var(--text-secondary)', border: '1px dashed var(--border-bright)' }}>
+            <span style={{ fontSize: '20px', display: 'block', marginBottom: '8px' }}>⚡</span>
             No LeetCode stats are available yet. Sync your profile to populate this dashboard.
           </div>
         ) : (
           <div className="stats-grid">
             {[
-              { label: 'Total Solved', value: totalSolved, sub: 'problems', color: 'var(--accent-cyan)', icon: '✅' },
-              { label: 'Easy', value: easySolved, sub: 'easy problems', color: 'var(--accent-green)', icon: '🟢' },
-              { label: 'Medium', value: mediumSolved, sub: 'medium problems', color: 'var(--accent-orange)', icon: '🟠' },
-              { label: 'Hard', value: hardSolved, sub: 'hard problems', color: 'var(--accent-pink)', icon: '🔴' },
-              { label: 'Acceptance Rate', value: `${acceptanceRate}%`, sub: 'accepted submissions', color: 'var(--accent-purple)', icon: '📈' },
-              { label: 'Ranking', value: ranking === 'N/A' ? 'N/A' : `#${ranking}`, sub: 'global rank', color: 'var(--accent-cyan)', icon: '🏅' },
-              { label: 'Contest Rating', value: contestRating, sub: 'contest score', color: 'var(--accent-orange)', icon: '⚡' },
-              { label: 'Last Synced', value: lastSynced, sub: 'latest refresh', color: 'var(--text-secondary)', icon: '🕒' },
+              { label: 'Total Solved', value: totalSolved, sub: 'problems', color: 'var(--accent-cyan)', glow: 'card-glow-cyan', icon: '✅' },
+              { label: 'Easy', value: easySolved, sub: 'easy problems', color: 'var(--accent-green)', glow: 'card-glow-green', icon: '🟢' },
+              { label: 'Medium', value: mediumSolved, sub: 'medium problems', color: 'var(--accent-orange)', glow: 'card-glow-orange', icon: '🟠' },
+              { label: 'Hard', value: hardSolved, sub: 'hard problems', color: 'var(--accent-pink)', glow: 'card-glow-pink', icon: '🔴' },
+              { label: 'Acceptance Rate', value: `${acceptanceRate}%`, sub: 'accepted rate', color: 'var(--accent-purple)', glow: 'card-glow-purple', icon: '📈' },
+              { label: 'Ranking', value: ranking === 'N/A' ? 'N/A' : `#${ranking.toLocaleString()}`, sub: 'global rank', color: 'var(--accent-cyan)', glow: 'card-glow-cyan', icon: '🏅' },
+              { label: 'Contest Rating', value: Math.round(contestRating), sub: 'contest score', color: 'var(--accent-orange)', glow: 'card-glow-orange', icon: '⚡' },
+              { label: 'Last Synced', value: lastSynced.split(',')[0], sub: lastSynced.split(',')[1] || 'latest update', color: 'var(--text-secondary)', glow: '', icon: '🕒' },
             ].map(stat => (
-              <div key={stat.label} className="stat-card" style={{ padding: '14px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <div>
-                    <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{stat.label}</div>
-                    <div style={{ fontFamily: 'var(--font-display)', fontSize: '22px', fontWeight: 800, color: stat.color }}>{stat.value}</div>
-                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>{stat.sub}</div>
+              <div key={stat.label} className={`stat-card ${stat.glow}`} style={{ padding: '16px', position: 'relative' }}>
+                <div className="flex-row-between" style={{ alignItems: 'flex-start' }}>
+                  <div style={{ overflow: 'hidden' }}>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.8px' }}>{stat.label}</div>
+                    <div style={{ fontFamily: 'var(--font-display)', fontSize: '22px', fontWeight: 800, color: stat.color, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{stat.value}</div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px' }}>{stat.sub}</div>
                   </div>
-                  <div style={{ fontSize: '20px' }}>{stat.icon}</div>
+                  <div style={{ fontSize: '18px', opacity: 0.8 }}>{stat.icon}</div>
                 </div>
               </div>
             ))}
@@ -189,36 +199,45 @@ const Dashboard = () => {
       </div>
 
       {/* Charts Row */}
-      <div className="charts-grid" style={{ marginBottom: '24px' }}>
+      <div className="charts-grid mb-24">
         {/* Radar Chart */}
         <div className="card">
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: '16px', fontWeight: 700, marginBottom: '4px' }}>Topic Mastery</div>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: '17px', fontWeight: 800, marginBottom: '4px' }}>Topic Mastery</div>
           <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>Performance across DSA domains</div>
           <ResponsiveContainer width="100%" height={240}>
             <RadarChart data={radarData}>
-              <PolarGrid stroke="rgba(255,255,255,0.07)" />
-              <PolarAngleAxis dataKey="topic" tick={{ fill: '#8B9CC8', fontSize: 11 }} />
-              <Radar name="Score" dataKey="score" stroke="#00D4FF" fill="#00D4FF" fillOpacity={0.15} strokeWidth={2} />
+              <PolarGrid stroke="rgba(255,255,255,0.04)" />
+              <PolarAngleAxis dataKey="topic" tick={{ fill: '#9CA3AF', fontSize: 11, fontWeight: 500 }} />
+              <Radar name="Score" dataKey="score" stroke="#00D4FF" fill="#00D4FF" fillOpacity={0.12} strokeWidth={2.5} />
             </RadarChart>
           </ResponsiveContainer>
         </div>
 
         {/* Activity Chart */}
         <div className="card">
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: '16px', fontWeight: 700, marginBottom: '4px' }}>Weekly Activity</div>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: '17px', fontWeight: 800, marginBottom: '4px' }}>Weekly Activity</div>
           <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>Problems solved this week</div>
           <ResponsiveContainer width="100%" height={240}>
             <AreaChart data={weeklyActivity}>
               <defs>
                 <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#00D4FF" stopOpacity={0.3} />
-                  <stop offset="100%" stopColor="#00D4FF" stopOpacity={0} />
+                  <stop offset="0%" stopColor="#00F2FE" stopOpacity={0.25} />
+                  <stop offset="100%" stopColor="#00F2FE" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <XAxis dataKey="day" tick={{ fill: '#8B9CC8', fontSize: 12 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: '#8B9CC8', fontSize: 11 }} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-primary)' }} />
-              <Area type="monotone" dataKey="solved" stroke="#00D4FF" strokeWidth={2} fill="url(#areaGrad)" />
+              <XAxis dataKey="day" tick={{ fill: '#9CA3AF', fontSize: 12 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: '#9CA3AF', fontSize: 11 }} axisLine={false} tickLine={false} />
+              <Tooltip 
+                contentStyle={{ 
+                  background: 'var(--bg-card-solid)', 
+                  border: '1px solid var(--border-bright)', 
+                  borderRadius: 12, 
+                  color: 'var(--text-primary)',
+                  boxShadow: '0 8px 30px rgba(0,0,0,0.5)',
+                  fontFamily: 'var(--font-body)'
+                }} 
+              />
+              <Area type="monotone" dataKey="solved" stroke="#00F2FE" strokeWidth={2.5} fill="url(#areaGrad)" />
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -228,40 +247,41 @@ const Dashboard = () => {
       <ContestHistory contestHistory={leetcodeData?.contestHistory || []} />
       <RecentSubmissions recentSubmissions={leetcodeData?.recentSubmissions || []} />
 
-      {/* Strengths and Weaknesses */}
-      <div className="strengths-grid" style={{ marginBottom: '24px' }}>
+      {/* Strengths and Focus Areas */}
+      <div className="strengths-grid mb-24">
         <div className="card">
-          <div style={{ fontSize: '16px', fontFamily: 'var(--font-display)', fontWeight: 700, marginBottom: '16px' }}>💪 Strong Areas</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {topStrong.map((t, i) => {
+          <div style={{ fontSize: '16px', fontFamily: 'var(--font-display)', fontWeight: 800, marginBottom: '18px' }}>💪 Strong Areas</div>
+          <div className="flex-column" style={{ gap: '14px' }}>
+            {topStrong.map((t) => {
               const pct = Math.round((t.solved / t.total) * 100);
               return (
                 <div key={t.topic}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                    <span style={{ fontSize: '14px', fontWeight: 500 }}>{t.topic}</span>
+                  <div className="flex-row-between mb-6">
+                    <span style={{ fontSize: '14px', fontWeight: 600 }}>{t.topic}</span>
                     <span className="tag tag-strong">{pct}%</span>
                   </div>
                   <div className="progress-bar">
-                    <div className="progress-fill" style={{ width: `${pct}%`, background: 'linear-gradient(90deg, var(--accent-green), #00aa55)' }} />
+                    <div className="progress-fill" style={{ width: `${pct}%`, background: 'linear-gradient(90deg, var(--accent-green), #059669)' }} />
                   </div>
                 </div>
               );
             })}
           </div>
         </div>
+        
         <div className="card">
-          <div style={{ fontSize: '16px', fontFamily: 'var(--font-display)', fontWeight: 700, marginBottom: '16px' }}>🎯 Focus Areas</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {topWeak.map((t, i) => {
+          <div style={{ fontSize: '16px', fontFamily: 'var(--font-display)', fontWeight: 800, marginBottom: '18px' }}>🎯 Focus Areas</div>
+          <div className="flex-column" style={{ gap: '14px' }}>
+            {topWeak.map((t) => {
               const pct = Math.round((t.solved / t.total) * 100);
               return (
                 <div key={t.topic}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                    <span style={{ fontSize: '14px', fontWeight: 500 }}>{t.topic}</span>
+                  <div className="flex-row-between mb-6">
+                    <span style={{ fontSize: '14px', fontWeight: 600 }}>{t.topic}</span>
                     <span className="tag tag-weak">{pct}%</span>
                   </div>
                   <div className="progress-bar">
-                    <div className="progress-fill" style={{ width: `${pct}%`, background: 'linear-gradient(90deg, var(--accent-pink), #cc0066)' }} />
+                    <div className="progress-fill" style={{ width: `${pct}%`, background: 'linear-gradient(90deg, var(--accent-pink), #dc2626)' }} />
                   </div>
                 </div>
               );
@@ -272,7 +292,7 @@ const Dashboard = () => {
 
       {/* Topic Progress Table */}
       <div className="card">
-        <div style={{ fontSize: '16px', fontFamily: 'var(--font-display)', fontWeight: 700, marginBottom: '16px' }}>📋 All Topics Overview</div>
+        <div style={{ fontSize: '16px', fontFamily: 'var(--font-display)', fontWeight: 800, marginBottom: '18px' }}>📋 All Topics Overview</div>
         <div style={{ overflowX: 'auto' }}>
           <table className="dsa-table">
             <thead>
@@ -283,25 +303,25 @@ const Dashboard = () => {
               </tr>
             </thead>
             <tbody>
-              {dsaProgress.map((t, i) => {
+              {dsaProgress.map((t) => {
                 const pct = Math.round((t.solved / t.total) * 100);
                 const level = pct >= 70 ? 'strong' : pct >= 40 ? 'moderate' : 'weak';
                 return (
                   <tr key={t.topic}>
-                    <td style={{ fontWeight: 600 }}>{t.topic}</td>
-                    <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-cyan)', fontWeight: 600 }}>{t.solved}</td>
+                    <td style={{ fontWeight: 700 }}>{t.topic}</td>
+                    <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-cyan)', fontWeight: 700 }}>{t.solved}</td>
                     <td style={{ color: 'var(--accent-green)', fontWeight: 600 }}>{t.easy}</td>
                     <td style={{ color: 'var(--accent-orange)', fontWeight: 600 }}>{t.medium}</td>
                     <td style={{ color: 'var(--accent-pink)', fontWeight: 600 }}>{t.hard}</td>
-                    <td style={{ minWidth: '120px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div className="progress-bar" style={{ flex: 1 }}>
+                    <td style={{ minWidth: '140px' }}>
+                      <div className="flex-align-center" style={{ gap: '12px' }}>
+                        <div className="progress-bar flex-1">
                           <div className="progress-fill" style={{
                             width: `${pct}%`,
                             background: pct >= 70 ? 'var(--accent-green)' : pct >= 40 ? 'var(--accent-orange)' : 'var(--accent-pink)'
                           }} />
                         </div>
-                        <span style={{ fontSize: '12px', color: 'var(--text-secondary)', minWidth: 32 }}>{pct}%</span>
+                        <span style={{ fontSize: '12px', color: 'var(--text-secondary)', minWidth: 32, fontWeight: 600 }}>{pct}%</span>
                       </div>
                     </td>
                     <td><span className={`tag tag-${level}`}>{level}</span></td>
@@ -318,106 +338,64 @@ const Dashboard = () => {
         <div style={{
           position: 'fixed',
           inset: 0,
-          background: 'rgba(26, 20, 16, 0.8)',
-          backdropFilter: 'blur(8px)',
+          background: 'rgba(3, 2, 7, 0.8)',
+          backdropFilter: 'blur(10px)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 1000
         }}>
-          <div style={{
-            background: 'var(--bg-card)',
-            border: '1px solid var(--border)',
-            borderRadius: '24px',
-            padding: '32px',
+          <div className="card" style={{
             width: '100%',
             maxWidth: '460px',
-            boxShadow: '0 0 50px rgba(0,0,0,0.6)',
-            position: 'relative'
+            boxShadow: '0 20px 60px rgba(0,0,0,0.6)',
+            borderColor: 'var(--border-bright)',
+            background: 'var(--bg-card-solid)'
           }}>
-            <h3 style={{
-              fontFamily: 'var(--font-display)',
-              fontSize: '22px',
-              fontWeight: 800,
-              marginBottom: '8px'
-            }}>Edit Profile Details</h3>
-            <p style={{
-              color: 'var(--text-secondary)',
-              fontSize: '13px',
-              marginBottom: '20px'
-            }}>
+            <h3 className="mb-8" style={{ fontFamily: 'var(--font-display)', fontSize: '22px', fontWeight: 800 }}>Edit Profile Details</h3>
+            <p className="mb-20" style={{ color: 'var(--text-secondary)', fontSize: '13.5px' }}>
               Configure your college, graduation details, and LeetCode handle.
             </p>
 
             {editError && (
-              <div style={{
-                background: 'rgba(239, 68, 68, 0.1)',
+              <div className="mb-16 text-center" style={{
+                background: 'rgba(239, 68, 68, 0.08)',
                 border: '1px solid rgba(239, 68, 68, 0.2)',
-                color: '#ef4444',
+                color: 'var(--accent-pink)',
                 padding: '10px 14px',
-                borderRadius: '8px',
-                fontSize: '13px',
-                marginBottom: '16px',
-                textAlign: 'center'
+                borderRadius: '10px',
+                fontSize: '13px'
               }}>
                 {editError}
               </div>
             )}
 
-            <form onSubmit={handleSaveProfile} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <form onSubmit={handleSaveProfile} className="flex-column" style={{ gap: '14px' }}>
               <div>
-                <label style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px', display: 'block', fontWeight: 600 }}>Full Name</label>
+                <label className="mb-6" style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'block', fontWeight: 600 }}>Full Name</label>
                 <input
                   type="text"
                   required
-                  style={{
-                    width: '100%',
-                    padding: '10px 14px',
-                    borderRadius: '8px',
-                    background: 'var(--bg-card2)',
-                    border: '1px solid var(--border)',
-                    color: 'var(--text-primary)',
-                    fontSize: '14px',
-                    outline: 'none',
-                    transition: 'border-color 0.2s'
-                  }}
+                  className="input-field"
                   value={profileForm.name}
                   onChange={e => setProfileForm({ ...profileForm, name: e.target.value })}
                 />
               </div>
 
               <div>
-                <label style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px', display: 'block', fontWeight: 600 }}>College</label>
+                <label className="mb-6" style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'block', fontWeight: 600 }}>College</label>
                 <input
                   type="text"
-                  style={{
-                    width: '100%',
-                    padding: '10px 14px',
-                    borderRadius: '8px',
-                    background: 'var(--bg-card2)',
-                    border: '1px solid var(--border)',
-                    color: 'var(--text-primary)',
-                    fontSize: '14px',
-                    outline: 'none'
-                  }}
+                  className="input-field"
                   value={profileForm.college}
                   onChange={e => setProfileForm({ ...profileForm, college: e.target.value })}
                 />
               </div>
 
               <div>
-                <label style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px', display: 'block', fontWeight: 600 }}>Year</label>
+                <label className="mb-6" style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'block', fontWeight: 600 }}>Year</label>
                 <select
-                  style={{
-                    width: '100%',
-                    padding: '10px 14px',
-                    borderRadius: '8px',
-                    background: 'var(--bg-card2)',
-                    border: '1px solid var(--border)',
-                    color: 'var(--text-primary)',
-                    fontSize: '14px',
-                    outline: 'none'
-                  }}
+                  className="input-field"
                   value={profileForm.year}
                   onChange={e => setProfileForm({ ...profileForm, year: e.target.value })}
                 >
@@ -430,56 +408,30 @@ const Dashboard = () => {
               </div>
 
               <div>
-                <label style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px', display: 'block', fontWeight: 600 }}>LeetCode Username</label>
+                <label className="mb-6" style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'block', fontWeight: 600 }}>LeetCode Username</label>
                 <input
                   type="text"
                   placeholder="e.g. aryan_codes"
-                  style={{
-                    width: '100%',
-                    padding: '10px 14px',
-                    borderRadius: '8px',
-                    background: 'var(--bg-card2)',
-                    border: '1px solid var(--border)',
-                    color: 'var(--text-primary)',
-                    fontSize: '14px',
-                    outline: 'none'
-                  }}
+                  className="input-field"
                   value={profileForm.leetcode}
                   onChange={e => setProfileForm({ ...profileForm, leetcode: e.target.value })}
                 />
               </div>
 
-              <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
+              <div className="flex-align-center mt-12" style={{ gap: '12px' }}>
                 <button
                   type="button"
                   onClick={() => setIsEditingProfile(false)}
-                  style={{
-                    flex: 1,
-                    padding: '10px',
-                    borderRadius: '8px',
-                    background: 'var(--bg-card2)',
-                    border: '1px solid var(--border)',
-                    color: 'var(--text-secondary)',
-                    fontWeight: 600,
-                    cursor: 'pointer'
-                  }}
+                  className="btn-ghost"
+                  style={{ flex: 1, padding: '11px', borderRadius: '12px' }}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={editSaving}
-                  style={{
-                    flex: 1,
-                    padding: '10px',
-                    borderRadius: '8px',
-                    background: 'linear-gradient(135deg, var(--accent-cyan), var(--accent-purple))',
-                    border: 'none',
-                    color: '#fff',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    opacity: editSaving ? 0.7 : 1
-                  }}
+                  className="btn-primary"
+                  style={{ flex: 1, padding: '11px', borderRadius: '12px' }}
                 >
                   {editSaving ? 'Saving...' : 'Save Changes'}
                 </button>

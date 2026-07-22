@@ -72,10 +72,8 @@ function twoSum(nums, target) {
       setHistory(prev => [{ code: code.slice(0, 100) + '...', fullCode: code, question, analysis: data.analysis, ts: new Date().toLocaleTimeString() }, ...prev.slice(0, 4)]);
     } catch (err) {
       console.warn('API key not configured or network issue, using simulated AI fallback:', err.message);
-      // Simulate API delay
       await new Promise(r => setTimeout(r, 1500));
       
-      // Mock analysis response
       const mockAnalysis = `**TIME COMPLEXITY**: O(n²) - Nested loops iterate through all pairs
 
 **SPACE COMPLEXITY**: O(1) - Only using constant extra space
@@ -133,39 +131,46 @@ function twoSum(nums, target) {
 
   return (
     <div className="animate-fadeIn">
-      <div style={{ marginBottom: '28px' }}>
+      <div className="mb-28">
         <h1 className="section-title">🤖 AI Doubt Solver</h1>
         <p className="section-subtitle">Paste your code and get instant analysis: complexity, bugs, optimization</p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px' }}>
         {/* Input Panel */}
-        <div>
-          <div className="card" style={{ marginBottom: '16px', borderColor: 'rgba(0,212,255,0.2)' }}>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: '15px', fontWeight: 700, marginBottom: '12px' }}>📥 Your Code</div>
-
-            {/* Quick examples */}
-            <div style={{ display: 'flex', gap: '6px', marginBottom: '10px', flexWrap: 'wrap' }}>
-              {exampleSnippets.map(s => (
-                <button key={s.label} onClick={() => setCode(s.code)} style={{
-                  background: 'var(--bg-card2)', border: '1px solid var(--border)',
-                  color: 'var(--text-secondary)', padding: '4px 10px', borderRadius: '6px',
-                  fontSize: '11px', cursor: 'pointer', fontFamily: 'var(--font-body)'
-                }}>{s.label}</button>
-              ))}
+        <div className="flex-column" style={{ gap: '20px' }}>
+          <div className="card" style={{ borderColor: 'rgba(0, 242, 254, 0.25)', background: 'rgba(13, 11, 26, 0.35)' }}>
+            <div className="flex-row-between mb-12 flex-wrap gap-8">
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: '16px', fontWeight: 800 }}>📥 Your Code</div>
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                {exampleSnippets.map(s => (
+                  <button key={s.label} onClick={() => setCode(s.code)} className="btn-ghost" style={{
+                    padding: '4px 10px', borderRadius: '8px', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase'
+                  }}>{s.label}</button>
+                ))}
+              </div>
             </div>
 
             <textarea
-              className="input-field"
+              className="input-field mb-16"
               value={code}
               onChange={e => setCode(e.target.value)}
-              style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', minHeight: '240px', lineHeight: '1.6' }}
+              style={{ 
+                fontFamily: 'var(--font-mono)', 
+                fontSize: '13px', 
+                minHeight: '260px', 
+                lineHeight: '1.6',
+                background: 'rgba(3, 2, 7, 0.5)',
+                border: '1px solid var(--border)',
+                boxShadow: 'inset 0 2px 10px rgba(0,0,0,0.5)',
+                color: 'var(--accent-cyan)'
+              }}
               placeholder="Paste your code here..."
               spellCheck={false}
             />
 
-            <div style={{ marginTop: '12px' }}>
-              <label style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>Specific question (optional)</label>
+            <div className="mb-16">
+              <label className="mb-6" style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'block', fontWeight: 600 }}>Specific question (optional)</label>
               <input
                 className="input-field"
                 value={question}
@@ -174,26 +179,30 @@ function twoSum(nums, target) {
               />
             </div>
 
-            <button className="btn-primary" onClick={analyzeCode} disabled={loading || !code.trim()} style={{ width: '100%', marginTop: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-              {loading ? <><span className="animate-spin" style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', display: 'inline-block' }} />Analyzing...</> : '🔍 Analyze Code'}
+            <button className="btn-primary" onClick={analyzeCode} disabled={loading || !code.trim()} style={{ width: '100%' }}>
+              {loading ? (
+                <>
+                  <span className="animate-spin" style={{ width: 16, height: 16, border: '2px solid rgba(0,0,0,0.3)', borderTopColor: '#000', borderRadius: '50%', display: 'inline-block' }} />
+                  Analyzing...
+                </>
+              ) : '🔍 Analyze Code'}
             </button>
           </div>
 
           {/* History */}
           {history.length > 0 && (
             <div className="card">
-              <div style={{ fontSize: '14px', fontWeight: 600, marginBottom: '10px', color: 'var(--text-secondary)' }}>Recent Analyses</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div className="mb-12" style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Recent Analyses</div>
+              <div className="flex-column" style={{ gap: '10px' }}>
                 {history.map((h, i) => (
                   <div key={i} onClick={() => { setAnalysis(h.analysis); if (h.fullCode) setCode(h.fullCode); if (h.question !== undefined) setQuestion(h.question); }} style={{
-                    background: 'var(--bg-deep)', borderRadius: '8px', padding: '10px',
-                    cursor: 'pointer', border: '1px solid var(--border)', transition: 'border-color 0.2s'
+                    background: 'rgba(3, 2, 7, 0.3)', borderRadius: '10px', padding: '12px 14px',
+                    cursor: 'pointer', border: '1px solid var(--border)', transition: 'all 0.25s'
                   }}
-                    onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--accent-cyan)'}
-                    onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
+                    className="card-glow-cyan"
                   >
-                    <div style={{ fontSize: '12px', fontFamily: 'var(--font-mono)', color: 'var(--text-muted)', marginBottom: '4px' }}>{h.ts}</div>
-                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.code}</div>
+                    <div style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', color: 'var(--text-muted)', marginBottom: '4px', fontWeight: 600 }}>{h.ts}</div>
+                    <div style={{ fontSize: '13px', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'var(--font-mono)' }}>{h.code}</div>
                   </div>
                 ))}
               </div>
@@ -203,41 +212,43 @@ function twoSum(nums, target) {
 
         {/* Output Panel */}
         <div>
-          <div className="card" style={{ borderColor: analysis ? 'rgba(0,212,255,0.2)' : 'var(--border)' }}>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: '15px', fontWeight: 700, marginBottom: '12px' }}>🤖 AI Analysis</div>
+          <div className="card" style={{ borderColor: analysis ? 'rgba(0, 242, 254, 0.25)' : 'var(--border)', minHeight: '320px', background: 'rgba(13, 11, 26, 0.35)' }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: '16px', fontWeight: 800, marginBottom: '16px' }}>🤖 AI Analysis Feedback</div>
 
             {!analysis && !loading && (
-              <div style={{ padding: '60px 20px', textAlign: 'center', border: '2px dashed var(--border)', borderRadius: '12px' }}>
-                <div style={{ fontSize: '48px', marginBottom: '12px' }}>🤖</div>
-                <div style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Paste your code and click "Analyze Code" to get instant feedback</div>
+              <div style={{ padding: '60px 20px', textAlign: 'center', border: '2px dashed var(--border-bright)', borderRadius: '16px', background: 'rgba(255,255,255,0.005)' }}>
+                <div style={{ fontSize: '48px', marginBottom: '14px' }}>🤖</div>
+                <div style={{ color: 'var(--text-primary)', fontSize: '15px', fontWeight: 600, marginBottom: '4px' }}>Ready to analyze your code</div>
+                <div style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>Paste your code and click "Analyze Code" to get instant feedback</div>
               </div>
             )}
 
             {loading && (
-              <div style={{ padding: '60px 20px', textAlign: 'center' }}>
+              <div style={{ padding: '80px 20px', textAlign: 'center' }}>
                 <div style={{ display: 'inline-flex', gap: '8px', marginBottom: '16px' }}>
                   {['var(--accent-cyan)', 'var(--accent-purple)', 'var(--accent-green)'].map((c, i) => (
-                    <div key={i} style={{ width: 10, height: 10, borderRadius: '50%', background: c, animation: `pulse ${0.8 + i * 0.2}s ease-in-out infinite` }} />
+                    <div key={i} className="dot-accent animate-pulse" style={{ background: c, width: 12, height: 12, animationDelay: `${i * 0.2}s` }} />
                   ))}
                 </div>
-                <div style={{ color: 'var(--text-secondary)' }}>Analyzing your code...</div>
+                <div style={{ color: 'var(--text-secondary)', fontSize: '14.5px', fontWeight: 500 }}>Analyzing your code...</div>
               </div>
             )}
 
             {analysis && !loading && (
-              <div className="animate-fadeIn" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div className="animate-fadeIn flex-column" style={{ gap: '14px' }}>
                 {parseAnalysis(analysis).map((section, i) => {
                   const color = getSectionColor(section.title);
                   return (
                     <div key={i} style={{
-                      background: 'var(--bg-deep)', borderLeft: `3px solid ${color}`,
-                      borderRadius: '8px', padding: '12px 14px'
+                      background: 'rgba(3, 2, 7, 0.35)', borderLeft: `4px solid ${color}`,
+                      borderRadius: '12px', padding: '16px', borderTop: '1px solid var(--border)',
+                      borderRight: '1px solid var(--border)', borderBottom: '1px solid var(--border)'
                     }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
-                        <span>{getSectionIcon(section.title)}</span>
-                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700, color, textTransform: 'uppercase', letterSpacing: '0.8px' }}>{section.title}</span>
+                      <div className="flex-align-center mb-8" style={{ gap: '8px' }}>
+                        <span style={{ fontSize: '16px' }}>{getSectionIcon(section.title)}</span>
+                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 800, color, textTransform: 'uppercase', letterSpacing: '0.8px' }}>{section.title}</span>
                       </div>
-                      <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.7', whiteSpace: 'pre-wrap' }}>{section.content}</div>
+                      <div style={{ fontSize: '13.5px', color: 'var(--text-secondary)', lineHeight: '1.7', whiteSpace: 'pre-wrap' }}>{section.content}</div>
                     </div>
                   );
                 })}

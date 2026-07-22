@@ -68,14 +68,6 @@ const Problems = () => {
     setLoading(false);
   };
 
-  const parseProblems = (text) => {
-    const blocks = text.split('---').filter(b => b.trim());
-    return blocks.map(block => {
-      const get = (key) => block.match(new RegExp(`${key}:\\s*(.+)`, 'i'))?.[1]?.trim() || '';
-      return { title: get('PROBLEM'), level: get('LEVEL'), topic: get('TOPIC'), url: get('URL'), why: get('WHY') };
-    }).filter(p => p.title);
-  };
-
   const getLevelColor = (level) => {
     if (level === 'Easy') return 'var(--accent-green)';
     if (level === 'Medium') return 'var(--accent-orange)';
@@ -88,34 +80,40 @@ const Problems = () => {
 
   return (
     <div className="animate-fadeIn">
-      <div style={{ marginBottom: '28px' }}>
+      <div className="mb-28">
         <h1 className="section-title">🎯 Problem Recommendations</h1>
         <p className="section-subtitle">AI-curated problems targeting your specific weak areas — no more random grinding</p>
       </div>
 
       {/* Config */}
-      <div className="card" style={{ marginBottom: '24px', borderColor: 'rgba(0,212,255,0.2)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
+      <div className="card mb-24" style={{ borderColor: 'rgba(0, 242, 254, 0.25)' }}>
+        <div className="flex-row-between flex-wrap gap-16">
           <div>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: '16px', fontWeight: 700 }}>Smart Problem Picker</div>
-            <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: '17px', fontWeight: 800 }}>Smart Problem Picker</div>
+            <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '2px' }}>
               Gets 3 Easy + 2 Medium + 1 Hard problems matched to your weak spots
             </div>
           </div>
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-            <div style={{ display: 'flex', gap: '8px' }}>
+          <div className="flex-align-center flex-wrap" style={{ gap: '14px' }}>
+            <div className="flex-align-center" style={{ gap: '6px' }}>
               {['LeetCode', 'GeeksForGeeks'].map(p => (
                 <button key={p} onClick={() => setPlatform(p)} style={{
-                  padding: '8px 16px', borderRadius: '8px', border: '1px solid',
+                  padding: '10px 18px', borderRadius: '10px', border: '1px solid',
                   borderColor: platform === p ? 'var(--accent-cyan)' : 'var(--border)',
-                  background: platform === p ? 'rgba(0,212,255,0.1)' : 'transparent',
+                  background: platform === p ? 'rgba(0, 242, 254, 0.08)' : 'rgba(3,2,7,0.3)',
                   color: platform === p ? 'var(--accent-cyan)' : 'var(--text-secondary)',
-                  cursor: 'pointer', fontSize: '13px', fontWeight: 600, fontFamily: 'var(--font-body)'
+                  cursor: 'pointer', fontSize: '13px', fontWeight: 700, fontFamily: 'var(--font-body)',
+                  transition: 'all 0.25s'
                 }}>{p}</button>
               ))}
             </div>
-            <button className="btn-primary" onClick={generateProblems} disabled={loading} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              {loading ? <><span className="animate-spin" style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', display: 'inline-block' }} />Loading...</> : '🎯 Get Recommendations'}
+            <button className="btn-primary" onClick={generateProblems} disabled={loading}>
+              {loading ? (
+                <>
+                  <span className="animate-spin" style={{ width: 16, height: 16, border: '2px solid rgba(0,0,0,0.3)', borderTopColor: '#000', borderRadius: '50%', display: 'inline-block' }} />
+                  Loading...
+                </>
+              ) : '🎯 Get Recommendations'}
             </button>
           </div>
         </div>
@@ -123,16 +121,16 @@ const Problems = () => {
 
       {/* Distribution */}
       {problems.length > 0 && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '24px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' }}>
           {[
-            { label: 'Easy', count: easyProbs.length, target: 3, color: 'var(--accent-green)' },
-            { label: 'Medium', count: medProbs.length, target: 2, color: 'var(--accent-orange)' },
-            { label: 'Hard', count: hardProbs.length, target: 1, color: 'var(--accent-pink)' },
+            { label: 'Easy', count: easyProbs.length, target: 3, color: 'var(--accent-green)', tagClass: 'tag-easy' },
+            { label: 'Medium', count: medProbs.length, target: 2, color: 'var(--accent-orange)', tagClass: 'tag-medium' },
+            { label: 'Hard', count: hardProbs.length, target: 1, color: 'var(--accent-pink)', tagClass: 'tag-hard' },
           ].map(d => (
-            <div key={d.label} className="card" style={{ textAlign: 'center', borderColor: `${d.color}33` }}>
+            <div key={d.label} className="card text-center" style={{ borderColor: `${d.color}25` }}>
               <div style={{ fontFamily: 'var(--font-display)', fontSize: '32px', fontWeight: 800, color: d.color }}>{d.count}</div>
-              <div style={{ fontSize: '14px', fontWeight: 600, color: d.color }}>{d.label}</div>
-              <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>problems</div>
+              <div className={`tag ${d.tagClass} mt-6`}>{d.label}</div>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>target: {d.target}</div>
             </div>
           ))}
         </div>
@@ -140,9 +138,9 @@ const Problems = () => {
 
       {/* Empty State */}
       {!problems.length && !loading && (
-        <div style={{ textAlign: 'center', padding: '80px 20px' }}>
+        <div className="text-center" style={{ padding: '80px 20px' }}>
           <div style={{ fontSize: '64px', marginBottom: '16px' }}>🎯</div>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: '20px', fontWeight: 700, marginBottom: '8px' }}>Ready to find your problems</div>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: '20px', fontWeight: 800, marginBottom: '8px' }}>Ready to find your problems</div>
           <div style={{ color: 'var(--text-secondary)', fontSize: '14px', maxWidth: '400px', margin: '0 auto' }}>
             The AI will analyze your weak topics and recommend the most impactful problems to solve next
           </div>
@@ -150,57 +148,59 @@ const Problems = () => {
       )}
 
       {loading && (
-        <div style={{ textAlign: 'center', padding: '60px' }}>
+        <div className="text-center" style={{ padding: '60px' }}>
           <div style={{ fontSize: '40px', marginBottom: '16px' }}>🔍</div>
-          <div style={{ color: 'var(--text-secondary)', marginBottom: '8px' }}>Searching for perfect problems...</div>
+          <div style={{ color: 'var(--text-primary)', marginBottom: '8px', fontSize: '15px', fontWeight: 600 }}>Searching for perfect problems...</div>
           <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Analyzing your weak areas and finding targeted problems</div>
         </div>
       )}
 
       {/* Problems List */}
       {problems.length > 0 && !loading && (
-        <div className="animate-fadeIn" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <div className="animate-fadeIn flex-column" style={{ gap: '14px' }}>
           {problems.map((p, i) => {
             const isSolved = solvedProblems.includes(i);
+            const cardGlow = p.level === 'Easy' ? 'card-glow-green' : p.level === 'Medium' ? 'card-glow-orange' : 'card-glow-pink';
             return (
-              <div key={i} className="card" style={{
-                borderColor: isSolved ? 'rgba(0,255,136,0.3)' : 'var(--border)',
-                opacity: isSolved ? 0.7 : 1, transition: 'all 0.3s'
+              <div key={i} className={`card ${cardGlow}`} style={{
+                opacity: isSolved ? 0.65 : 1, transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                borderColor: isSolved ? 'var(--accent-green)' : 'var(--border)',
+                background: 'rgba(13, 11, 26, 0.35)'
               }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px' }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px', flexWrap: 'wrap' }}>
+                <div className="flex-row-between flex-wrap gap-16" style={{ alignItems: 'flex-start' }}>
+                  <div style={{ flex: 1, minWidth: '240px' }}>
+                    <div className="flex-align-center mb-8 flex-wrap" style={{ gap: '10px' }}>
                       <span style={{
                         fontFamily: 'var(--font-mono)', fontSize: '12px', color: 'var(--text-muted)',
-                        background: 'var(--bg-card2)', padding: '2px 8px', borderRadius: '4px'
+                        background: 'rgba(3,2,7,0.3)', padding: '3px 8px', borderRadius: '6px', border: '1px solid var(--border)'
                       }}>#{i + 1}</span>
-                      <span style={{ fontFamily: 'var(--font-display)', fontSize: '15px', fontWeight: 700, textDecoration: isSolved ? 'line-through' : 'none' }}>{p.title}</span>
+                      <span style={{ fontFamily: 'var(--font-display)', fontSize: '16px', fontWeight: 800, textDecoration: isSolved ? 'line-through' : 'none' }}>{p.title}</span>
                       <span className={`tag tag-${p.level?.toLowerCase()}`}>{p.level}</span>
                       <span style={{
-                        fontSize: '12px', color: 'var(--accent-purple)', background: 'rgba(124,58,237,0.1)',
-                        padding: '3px 10px', borderRadius: '20px', border: '1px solid rgba(124,58,237,0.2)'
+                        fontSize: '11px', color: 'var(--accent-purple)', background: 'rgba(124,58,237,0.08)',
+                        padding: '4px 10px', borderRadius: '99px', border: '1px solid rgba(124,58,237,0.15)',
+                        fontWeight: 700, textTransform: 'uppercase', fontFamily: 'var(--font-mono)'
                       }}>{p.topic}</span>
                     </div>
                     {p.why && (
-                      <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '8px', fontStyle: 'italic' }}>
+                      <div style={{ fontSize: '13.5px', color: 'var(--text-secondary)', marginBottom: '4px', lineHeight: '1.5' }}>
                         💡 {p.why}
                       </div>
                     )}
                   </div>
-                  <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+                  <div className="flex-align-center" style={{ gap: '10px', flexShrink: 0 }}>
                     {p.url && p.url !== '#' && (
-                      <a href={p.url} target="_blank" rel="noopener noreferrer" style={{
-                        background: 'var(--bg-card2)', border: '1px solid var(--border)',
-                        color: 'var(--accent-cyan)', padding: '6px 14px', borderRadius: '8px',
-                        fontSize: '13px', fontWeight: 600, textDecoration: 'none', transition: 'all 0.2s'
+                      <a href={p.url} target="_blank" rel="noopener noreferrer" className="btn-ghost" style={{
+                        color: 'var(--accent-cyan)', borderColor: 'rgba(0, 242, 254, 0.2)',
+                        padding: '8px 16px', borderRadius: '10px', fontWeight: 700, textDecoration: 'none',
+                        background: 'rgba(0, 242, 254, 0.03)'
                       }}>Solve →</a>
                     )}
-                    <button onClick={() => setSolvedProblems(prev => isSolved ? prev.filter(x => x !== i) : [...prev, i])} style={{
-                      background: isSolved ? 'rgba(0,255,136,0.15)' : 'var(--bg-card2)',
-                      border: `1px solid ${isSolved ? 'var(--accent-green)' : 'var(--border)'}`,
+                    <button onClick={() => setSolvedProblems(prev => isSolved ? prev.filter(x => x !== i) : [...prev, i])} className="btn-ghost" style={{
+                      borderColor: isSolved ? 'rgba(16, 185, 129, 0.3)' : 'var(--border)',
                       color: isSolved ? 'var(--accent-green)' : 'var(--text-secondary)',
-                      padding: '6px 14px', borderRadius: '8px', cursor: 'pointer',
-                      fontSize: '13px', fontFamily: 'var(--font-body)'
+                      padding: '8px 16px', borderRadius: '10px', fontWeight: 700,
+                      background: isSolved ? 'rgba(16, 185, 129, 0.05)' : 'rgba(3,2,7,0.2)'
                     }}>{isSolved ? '✅ Done' : 'Mark Done'}</button>
                   </div>
                 </div>
@@ -208,7 +208,7 @@ const Problems = () => {
             );
           })}
           {solvedProblems.length > 0 && (
-            <div style={{ textAlign: 'center', padding: '12px', color: 'var(--accent-green)', fontSize: '14px' }}>
+            <div className="text-center mt-12" style={{ color: 'var(--accent-green)', fontSize: '14.5px', fontWeight: 600 }}>
               🎉 {solvedProblems.length} problem{solvedProblems.length > 1 ? 's' : ''} solved! Great work!
             </div>
           )}

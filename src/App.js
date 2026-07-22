@@ -36,10 +36,10 @@ const MainApp = () => {
         <button className="mobile-menu-btn" onClick={() => setSidebarOpen(true)}>
           ☰
         </button>
-        <span style={{ fontFamily: 'var(--font-display)', fontSize: '18px', fontWeight: 800 }}>
+        <span style={{ fontFamily: 'var(--font-display)', fontSize: '20px', fontWeight: 800, letterSpacing: '-0.5px' }}>
           DSA<span className="gradient-text-cyan">Forge</span>
         </span>
-        <div style={{ width: '40px' }} /> {/* balancer spacing */}
+        <div style={{ width: '44px' }} /> {/* balancer spacing */}
       </div>
 
       {/* Sidebar mobile overlay */}
