@@ -25,7 +25,7 @@ const isStructuredAnalysis = (analysis) => {
 };
 
 const AIAnalysis = () => {
-  const { dsaProgress, runAIAnalysis, fetchLatestAIAnalysis } = useApp();
+  const { dsaProgress, runAIAnalysis, fetchLatestAIAnalysis, leetcodeData } = useApp();
   const [analysis, setAnalysis] = useState(null);
   const [loading, setLoading] = useState(false);
   const [analyzed, setAnalyzed] = useState(false);
@@ -263,117 +263,131 @@ const AIAnalysis = () => {
         <p className="section-subtitle">AI-powered deep analysis of your DSA performance and personalized recommendations</p>
       </div>
 
-      {/* Quick overview cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', marginBottom: '24px' }}>
-        <div className="card" style={{ borderColor: 'rgba(16, 185, 129, 0.25)', background: 'rgba(13, 11, 26, 0.3)' }}>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '12px', fontWeight: 700, letterSpacing: '0.8px' }}>💪 STRONG TOPICS</div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-            {strongTopics.map(t => <span key={t.topic} className="tag tag-strong">{t.topic}</span>)}
-            {strongTopics.length === 0 && <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Keep practicing!</span>}
+      {!leetcodeData ? (
+        <div className="card text-center" style={{ padding: '50px 24px', border: '1px dashed var(--border-bright)' }}>
+          <span style={{ fontSize: '44px', display: 'block', marginBottom: '14px' }}>🧠</span>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: '18px', fontWeight: 800, marginBottom: '6px' }}>
+            Sync LeetCode ID to Run AI Weakness Analysis
           </div>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '14px', maxWidth: '480px', margin: '0 auto 16px' }}>
+            Please sync your LeetCode profile in the Dashboard to allow the AI engine to analyze your progress and generate placement preparation insights.
+          </p>
         </div>
-        <div className="card" style={{ borderColor: 'rgba(239, 68, 68, 0.25)', background: 'rgba(13, 11, 26, 0.3)' }}>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '12px', fontWeight: 700, letterSpacing: '0.8px' }}>⚠️ WEAK TOPICS</div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-            {weakTopics.map(t => <span key={t.topic} className="tag tag-weak">{t.topic}</span>)}
-            {weakTopics.length === 0 && <span style={{ fontSize: '13px', color: 'var(--accent-green)', fontWeight: 600 }}>All topics look good!</span>}
-          </div>
-        </div>
-        <div className="card" style={{ borderColor: 'rgba(139, 92, 246, 0.25)', background: 'rgba(13, 11, 26, 0.3)' }}>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '10px', fontWeight: 700, letterSpacing: '0.8px' }}>📊 OVERALL STATUS</div>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: '32px', fontWeight: 800, color: 'var(--accent-purple)' }}>
-            {Math.round((dsaProgress.reduce((s, t) => s + (t.solved / t.total), 0) / dsaProgress.length) * 100)}%
-          </div>
-          <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px', fontWeight: 500 }}>Average completion rate</div>
-        </div>
-      </div>
-
-      {/* AI Analysis Panel */}
-      <div className="card mb-24" style={{ borderColor: 'rgba(0, 242, 254, 0.25)' }}>
-        <div className="flex-row-between mb-20 flex-wrap gap-12">
-          <div>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: '18px', fontWeight: 800 }}>AI Analysis Engine</div>
-            <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '2px' }}>Powered by Gemini AI — analyzes your full progress history</div>
-          </div>
-          <button className="btn-primary" onClick={runAnalysis} disabled={loading}>
-            {loading ? (
-              <>
-                <span className="animate-spin" style={{ width: 16, height: 16, border: '2px solid rgba(0,0,0,0.3)', borderTopColor: '#000', borderRadius: '50%', display: 'inline-block' }} />
-                Analyzing...
-              </>
-            ) : '🧠 Run AI Analysis'}
-          </button>
-        </div>
-
-        {/* Data being sent to AI */}
-        <div style={{ background: 'rgba(3, 2, 7, 0.4)', border: '1px solid var(--border)', borderRadius: '12px', padding: '16px', marginBottom: '20px' }}>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '10px', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>// Input: Your DSA Progress Data</div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-            {dsaProgress.map(t => {
-              const pct = Math.round((t.solved / t.total) * 100);
-              return (
-                <div key={t.topic} style={{
-                  background: 'var(--bg-card2)', border: '1px solid var(--border)',
-                  borderRadius: '8px', padding: '6px 12px', fontSize: '12.5px',
-                  display: 'flex', alignItems: 'center', gap: '8px'
-                }}>
-                  <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>{t.topic}</span>
-                  <span style={{
-                    color: pct >= 70 ? 'var(--accent-green)' : pct >= 40 ? 'var(--accent-orange)' : 'var(--accent-pink)',
-                    fontFamily: 'var(--font-mono)', fontWeight: 700
-                  }}>{pct}%</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* AI Output */}
-        {!analysis && !loading && (
-          <div style={{
-            border: '2px dashed var(--border-bright)', borderRadius: '16px', padding: '50px 20px',
-            textAlign: 'center', color: 'var(--text-muted)', background: 'rgba(255,255,255,0.005)'
-          }}>
-            <div style={{ fontSize: '44px', marginBottom: '14px' }}>🧠</div>
-            <div style={{ fontSize: '16px', marginBottom: '6px', color: 'var(--text-primary)', fontWeight: 600 }}>Ready to analyze your performance</div>
-            <div style={{ fontSize: '13.5px', color: 'var(--text-secondary)' }}>Click "Run AI Analysis" to get personalized insights and recommendations</div>
-          </div>
-        )}
-
-        {loading && (
-          <div style={{ padding: '50px 20px', textAlign: 'center' }}>
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '18px' }}>
-              {[0, 1, 2].map(i => (
-                <div key={i} className="dot-accent dot-cyan animate-pulse" style={{ width: 12, height: 12, animationDelay: `${i * 0.2}s` }} />
-              ))}
+      ) : (
+        <>
+          {/* Quick overview cards */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', marginBottom: '24px' }}>
+            <div className="card" style={{ borderColor: 'rgba(16, 185, 129, 0.25)', background: 'rgba(13, 11, 26, 0.3)' }}>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '12px', fontWeight: 700, letterSpacing: '0.8px' }}>💪 STRONG TOPICS</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                {strongTopics.map(t => <span key={t.topic} className="tag tag-strong">{t.topic}</span>)}
+                {strongTopics.length === 0 && <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Keep practicing!</span>}
+              </div>
             </div>
-            <div style={{ color: 'var(--text-secondary)', fontSize: '14.5px', fontWeight: 500 }}>AI is analyzing your DSA progress...</div>
+            <div className="card" style={{ borderColor: 'rgba(239, 68, 68, 0.25)', background: 'rgba(13, 11, 26, 0.3)' }}>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '12px', fontWeight: 700, letterSpacing: '0.8px' }}>⚠️ WEAK TOPICS</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                {weakTopics.map(t => <span key={t.topic} className="tag tag-weak">{t.topic}</span>)}
+                {weakTopics.length === 0 && <span style={{ fontSize: '13px', color: 'var(--accent-green)', fontWeight: 600 }}>All topics look good!</span>}
+              </div>
+            </div>
+            <div className="card" style={{ borderColor: 'rgba(139, 92, 246, 0.25)', background: 'rgba(13, 11, 26, 0.3)' }}>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '10px', fontWeight: 700, letterSpacing: '0.8px' }}>📊 OVERALL STATUS</div>
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: '32px', fontWeight: 800, color: 'var(--accent-purple)' }}>
+                {Math.round((dsaProgress.reduce((s, t) => s + (t.solved / t.total), 0) / dsaProgress.length) * 100)}%
+              </div>
+              <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px', fontWeight: 500 }}>Average completion rate</div>
+            </div>
           </div>
-        )}
 
-        {analysis && !loading && (
-          <div className="animate-fadeIn">
-            {isStructuredAnalysis(analysis)
-              ? renderStructuredAnalysis(analysis)
-              : renderTextAnalysis(analysis).map((section, i) => (
-                <div key={i} style={{
-                  background: 'rgba(3, 2, 7, 0.3)', border: '1px solid var(--border)',
-                  borderLeft: `4px solid ${getSectionColor(section.title)}`,
-                  borderRadius: '12px', padding: '20px', marginBottom: '14px',
-                  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.01)'
-                }}>
-                  <div style={{
-                    fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 800,
-                    color: getSectionColor(section.title), marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '1px'
-                  }}>{section.title}</div>
-                  <div style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: '1.75', whiteSpace: 'pre-wrap' }}>
-                    {section.content}
-                  </div>
+          {/* AI Analysis Panel */}
+          <div className="card mb-24" style={{ borderColor: 'rgba(0, 242, 254, 0.25)' }}>
+            <div className="flex-row-between mb-20 flex-wrap gap-12">
+              <div>
+                <div style={{ fontFamily: 'var(--font-display)', fontSize: '18px', fontWeight: 800 }}>AI Analysis Engine</div>
+                <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '2px' }}>Powered by Gemini AI — analyzes your full progress history</div>
+              </div>
+              <button className="btn-primary" onClick={runAnalysis} disabled={loading}>
+                {loading ? (
+                  <>
+                    <span className="animate-spin" style={{ width: 16, height: 16, border: '2px solid rgba(0,0,0,0.3)', borderTopColor: '#000', borderRadius: '50%', display: 'inline-block' }} />
+                    Analyzing...
+                  </>
+                ) : '🧠 Run AI Analysis'}
+              </button>
+            </div>
+
+            {/* Data being sent to AI */}
+            <div style={{ background: 'rgba(3, 2, 7, 0.4)', border: '1px solid var(--border)', borderRadius: '12px', padding: '16px', marginBottom: '20px' }}>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '10px', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>// Input: Your DSA Progress Data</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                {dsaProgress.map(t => {
+                  const pct = Math.round((t.solved / t.total) * 100);
+                  return (
+                    <div key={t.topic} style={{
+                      background: 'var(--bg-card2)', border: '1px solid var(--border)',
+                      borderRadius: '8px', padding: '6px 12px', fontSize: '12.5px',
+                      display: 'flex', alignItems: 'center', gap: '8px'
+                    }}>
+                      <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>{t.topic}</span>
+                      <span style={{
+                        color: pct >= 70 ? 'var(--accent-green)' : pct >= 40 ? 'var(--accent-orange)' : 'var(--accent-pink)',
+                        fontFamily: 'var(--font-mono)', fontWeight: 700
+                      }}>{pct}%</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* AI Output */}
+            {!analysis && !loading && (
+              <div style={{
+                border: '2px dashed var(--border-bright)', borderRadius: '16px', padding: '50px 20px',
+                textAlign: 'center', color: 'var(--text-muted)', background: 'rgba(255,255,255,0.005)'
+              }}>
+                <div style={{ fontSize: '44px', marginBottom: '14px' }}>🧠</div>
+                <div style={{ fontSize: '16px', marginBottom: '6px', color: 'var(--text-primary)', fontWeight: 600 }}>Ready to analyze your performance</div>
+                <div style={{ fontSize: '13.5px', color: 'var(--text-secondary)' }}>Click "Run AI Analysis" to get personalized insights and recommendations</div>
+              </div>
+            )}
+
+            {loading && (
+              <div style={{ padding: '50px 20px', textAlign: 'center' }}>
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '18px' }}>
+                  {[0, 1, 2].map(i => (
+                    <div key={i} className="dot-accent dot-cyan animate-pulse" style={{ width: 12, height: 12, animationDelay: `${i * 0.2}s` }} />
+                  ))}
                 </div>
-              ))}
+                <div style={{ color: 'var(--text-secondary)', fontSize: '14.5px', fontWeight: 500 }}>AI is analyzing your DSA progress...</div>
+              </div>
+            )}
+
+            {analysis && !loading && (
+              <div className="animate-fadeIn">
+                {isStructuredAnalysis(analysis)
+                  ? renderStructuredAnalysis(analysis)
+                  : renderTextAnalysis(analysis).map((section, i) => (
+                    <div key={i} style={{
+                      background: 'rgba(3, 2, 7, 0.3)', border: '1px solid var(--border)',
+                      borderLeft: `4px solid ${getSectionColor(section.title)}`,
+                      borderRadius: '12px', padding: '20px', marginBottom: '14px',
+                      boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.01)'
+                    }}>
+                      <div style={{
+                        fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 800,
+                        color: getSectionColor(section.title), marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '1px'
+                      }}>{section.title}</div>
+                      <div style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: '1.75', whiteSpace: 'pre-wrap' }}>
+                        {section.content}
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </>
+      )}
     </div>
   );
 };

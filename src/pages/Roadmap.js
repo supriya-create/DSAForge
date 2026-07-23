@@ -22,7 +22,7 @@ GOAL: [Weekly goal in one sentence]
 Generate all ${weeks} weeks in this format. Be specific with subtopics.`;
 
 const Roadmap = () => {
-  const { dsaProgress, generateAIRoadmap, fetchLatestRoadmap } = useApp();
+  const { dsaProgress, generateAIRoadmap, fetchLatestRoadmap, leetcodeData } = useApp();
   const [weeks, setWeeks] = useState(4);
   const [roadmap, setRoadmap] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -91,55 +91,69 @@ const Roadmap = () => {
         <p className="section-subtitle">AI-generated week-by-week study plan tailored to your weak areas</p>
       </div>
 
-      {/* Config Card */}
-      <div className="card mb-24" style={{ borderColor: 'rgba(0, 242, 254, 0.25)' }}>
-        <div className="flex-row-between flex-wrap gap-16">
-          <div>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: '17px', fontWeight: 800 }}>Generate Your Study Plan</div>
-            <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '2px' }}>AI will prioritize your weakest topics and build a structured path</div>
+      {!leetcodeData ? (
+        <div className="card text-center" style={{ padding: '50px 24px', border: '1px dashed var(--border-bright)' }}>
+          <span style={{ fontSize: '44px', display: 'block', marginBottom: '14px' }}>🗺️</span>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: '18px', fontWeight: 800, marginBottom: '6px' }}>
+            Sync LeetCode ID to Generate Study Plan
           </div>
-          <div className="flex-align-center flex-wrap" style={{ gap: '16px' }}>
-            <div>
-              <label className="mb-6" style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block', fontWeight: 600 }}>Duration (weeks)</label>
-              <select value={weeks} onChange={e => setWeeks(parseInt(e.target.value))} className="input-field" style={{ width: '140px', padding: '10px 14px' }}>
-                {[2, 4, 6, 8, 12].map(w => <option key={w} value={w}>{w} weeks</option>)}
-              </select>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '14px', maxWidth: '480px', margin: '0 auto 16px' }}>
+            Please sync your LeetCode profile in the Dashboard to allow the AI to generate a personalized week-by-week study roadmap based on your progress.
+          </p>
+        </div>
+      ) : (
+        <>
+          {/* Config Card */}
+          <div className="card mb-24" style={{ borderColor: 'rgba(0, 242, 254, 0.25)' }}>
+            <div className="flex-row-between flex-wrap gap-16">
+              <div>
+                <div style={{ fontFamily: 'var(--font-display)', fontSize: '17px', fontWeight: 800 }}>Generate Your Study Plan</div>
+                <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '2px' }}>AI will prioritize your weakest topics and build a structured path</div>
+              </div>
+              <div className="flex-align-center flex-wrap" style={{ gap: '16px' }}>
+                <div>
+                  <label className="mb-6" style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block', fontWeight: 600 }}>Duration (weeks)</label>
+                  <select value={weeks} onChange={e => setWeeks(parseInt(e.target.value))} className="input-field" style={{ width: '140px', padding: '10px 14px' }}>
+                    {[2, 4, 6, 8, 12].map(w => <option key={w} value={w}>{w} weeks</option>)}
+                  </select>
+                </div>
+                <button className="btn-primary" onClick={generateRoadmap} disabled={loading} style={{ marginTop: '18px' }}>
+                  {loading ? (
+                    <>
+                      <span className="animate-spin" style={{ width: 16, height: 16, border: '2px solid rgba(0,0,0,0.3)', borderTopColor: '#000', borderRadius: '50%', display: 'inline-block' }} />
+                      Building...
+                    </>
+                  ) : '🗺 Generate Roadmap'}
+                </button>
+              </div>
             </div>
-            <button className="btn-primary" onClick={generateRoadmap} disabled={loading} style={{ marginTop: '18px' }}>
-              {loading ? (
-                <>
-                  <span className="animate-spin" style={{ width: 16, height: 16, border: '2px solid rgba(0,0,0,0.3)', borderTopColor: '#000', borderRadius: '50%', display: 'inline-block' }} />
-                  Building...
-                </>
-              ) : '🗺 Generate Roadmap'}
-            </button>
           </div>
-        </div>
-      </div>
 
-      {/* Empty state */}
-      {!roadmap && !loading && (
-        <div className="text-center" style={{ padding: '80px 20px' }}>
-          <div style={{ fontSize: '64px', marginBottom: '16px' }}>🗺</div>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: '20px', fontWeight: 800, marginBottom: '8px' }}>No roadmap yet</div>
-          <div style={{ color: 'var(--text-secondary)', fontSize: '14px', maxWidth: '400px', margin: '0 auto' }}>
-            Click "Generate Roadmap" and the AI will create a personalized week-by-week plan based on your current progress
-          </div>
-        </div>
-      )}
+          {/* Empty state */}
+          {!roadmap && !loading && (
+            <div className="text-center" style={{ padding: '80px 20px' }}>
+              <div style={{ fontSize: '64px', marginBottom: '16px' }}>🗺</div>
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: '20px', fontWeight: 800, marginBottom: '8px' }}>No roadmap yet</div>
+              <div style={{ color: 'var(--text-secondary)', fontSize: '14px', maxWidth: '400px', margin: '0 auto' }}>
+                Click "Generate Roadmap" and the AI will create a personalized week-by-week plan based on your current progress
+              </div>
+            </div>
+          )}
 
-      {loading && (
-        <div className="text-center" style={{ padding: '60px' }}>
-          <div style={{ display: 'inline-flex', gap: '10px', marginBottom: '18px' }}>
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="dot-accent animate-pulse" style={{
-                background: weekColors[i], width: 12, height: 12,
-                animationDelay: `${i * 0.15}s`
-              }} />
-            ))}
-          </div>
-          <div style={{ color: 'var(--text-secondary)', fontSize: '14.5px', fontWeight: 500 }}>Crafting your personalized roadmap...</div>
-        </div>
+          {loading && (
+            <div className="text-center" style={{ padding: '60px' }}>
+              <div style={{ display: 'inline-flex', gap: '10px', marginBottom: '18px' }}>
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="dot-accent animate-pulse" style={{
+                    background: weekColors[i], width: 12, height: 12,
+                    animationDelay: `${i * 0.15}s`
+                  }} />
+                ))}
+              </div>
+              <div style={{ color: 'var(--text-secondary)', fontSize: '14.5px', fontWeight: 500 }}>Crafting your personalized roadmap...</div>
+            </div>
+          )}
+        </>
       )}
 
       {/* Roadmap Timeline */}

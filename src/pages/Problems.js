@@ -20,7 +20,7 @@ WHY: [One sentence explaining why this problem is recommended for them]
 Recommend exactly 6 problems following this format strictly.`;
 
 const Problems = () => {
-  const { dsaProgress, generateProblems: runGenerateProblems, fetchLatestProblems } = useApp();
+  const { dsaProgress, generateProblems: runGenerateProblems, fetchLatestProblems, leetcodeData } = useApp();
   const [problems, setProblems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [platform, setPlatform] = useState('LeetCode');
@@ -85,74 +85,88 @@ const Problems = () => {
         <p className="section-subtitle">AI-curated problems targeting your specific weak areas — no more random grinding</p>
       </div>
 
-      {/* Config */}
-      <div className="card mb-24" style={{ borderColor: 'rgba(0, 242, 254, 0.25)' }}>
-        <div className="flex-row-between flex-wrap gap-16">
-          <div>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: '17px', fontWeight: 800 }}>Smart Problem Picker</div>
-            <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '2px' }}>
-              Gets 3 Easy + 2 Medium + 1 Hard problems matched to your weak spots
+      {!leetcodeData ? (
+        <div className="card text-center" style={{ padding: '50px 24px', border: '1px dashed var(--border-bright)' }}>
+          <span style={{ fontSize: '44px', display: 'block', marginBottom: '14px' }}>🎯</span>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: '18px', fontWeight: 800, marginBottom: '6px' }}>
+            Sync LeetCode ID to Get Problem Recommendations
+          </div>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '14px', maxWidth: '480px', margin: '0 auto 16px' }}>
+            Please sync your LeetCode profile in the Dashboard to allow the AI to target your weak spots and recommend the most impactful problems.
+          </p>
+        </div>
+      ) : (
+        <>
+          {/* Config */}
+          <div className="card mb-24" style={{ borderColor: 'rgba(0, 242, 254, 0.25)' }}>
+            <div className="flex-row-between flex-wrap gap-16">
+              <div>
+                <div style={{ fontFamily: 'var(--font-display)', fontSize: '17px', fontWeight: 800 }}>Smart Problem Picker</div>
+                <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                  Gets 3 Easy + 2 Medium + 1 Hard problems matched to your weak spots
+                </div>
+              </div>
+              <div className="flex-align-center flex-wrap" style={{ gap: '14px' }}>
+                <div className="flex-align-center" style={{ gap: '6px' }}>
+                  {['LeetCode', 'GeeksForGeeks'].map(p => (
+                    <button key={p} onClick={() => setPlatform(p)} style={{
+                      padding: '10px 18px', borderRadius: '10px', border: '1px solid',
+                      borderColor: platform === p ? 'var(--accent-cyan)' : 'var(--border)',
+                      background: platform === p ? 'rgba(0, 242, 254, 0.08)' : 'rgba(3,2,7,0.3)',
+                      color: platform === p ? 'var(--accent-cyan)' : 'var(--text-secondary)',
+                      cursor: 'pointer', fontSize: '13px', fontWeight: 700, fontFamily: 'var(--font-body)',
+                      transition: 'all 0.25s'
+                    }}>{p}</button>
+                  ))}
+                </div>
+                <button className="btn-primary" onClick={generateProblems} disabled={loading}>
+                  {loading ? (
+                    <>
+                      <span className="animate-spin" style={{ width: 16, height: 16, border: '2px solid rgba(0,0,0,0.3)', borderTopColor: '#000', borderRadius: '50%', display: 'inline-block' }} />
+                      Loading...
+                    </>
+                  ) : '🎯 Get Recommendations'}
+                </button>
+              </div>
             </div>
           </div>
-          <div className="flex-align-center flex-wrap" style={{ gap: '14px' }}>
-            <div className="flex-align-center" style={{ gap: '6px' }}>
-              {['LeetCode', 'GeeksForGeeks'].map(p => (
-                <button key={p} onClick={() => setPlatform(p)} style={{
-                  padding: '10px 18px', borderRadius: '10px', border: '1px solid',
-                  borderColor: platform === p ? 'var(--accent-cyan)' : 'var(--border)',
-                  background: platform === p ? 'rgba(0, 242, 254, 0.08)' : 'rgba(3,2,7,0.3)',
-                  color: platform === p ? 'var(--accent-cyan)' : 'var(--text-secondary)',
-                  cursor: 'pointer', fontSize: '13px', fontWeight: 700, fontFamily: 'var(--font-body)',
-                  transition: 'all 0.25s'
-                }}>{p}</button>
+
+          {/* Distribution */}
+          {problems.length > 0 && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' }}>
+              {[
+                { label: 'Easy', count: easyProbs.length, target: 3, color: 'var(--accent-green)', tagClass: 'tag-easy' },
+                { label: 'Medium', count: medProbs.length, target: 2, color: 'var(--accent-orange)', tagClass: 'tag-medium' },
+                { label: 'Hard', count: hardProbs.length, target: 1, color: 'var(--accent-pink)', tagClass: 'tag-hard' },
+              ].map(d => (
+                <div key={d.label} className="card text-center" style={{ borderColor: `${d.color}25` }}>
+                  <div style={{ fontFamily: 'var(--font-display)', fontSize: '32px', fontWeight: 800, color: d.color }}>{d.count}</div>
+                  <div className={`tag ${d.tagClass} mt-6`}>{d.label}</div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>target: {d.target}</div>
+                </div>
               ))}
             </div>
-            <button className="btn-primary" onClick={generateProblems} disabled={loading}>
-              {loading ? (
-                <>
-                  <span className="animate-spin" style={{ width: 16, height: 16, border: '2px solid rgba(0,0,0,0.3)', borderTopColor: '#000', borderRadius: '50%', display: 'inline-block' }} />
-                  Loading...
-                </>
-              ) : '🎯 Get Recommendations'}
-            </button>
-          </div>
-        </div>
-      </div>
+          )}
 
-      {/* Distribution */}
-      {problems.length > 0 && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' }}>
-          {[
-            { label: 'Easy', count: easyProbs.length, target: 3, color: 'var(--accent-green)', tagClass: 'tag-easy' },
-            { label: 'Medium', count: medProbs.length, target: 2, color: 'var(--accent-orange)', tagClass: 'tag-medium' },
-            { label: 'Hard', count: hardProbs.length, target: 1, color: 'var(--accent-pink)', tagClass: 'tag-hard' },
-          ].map(d => (
-            <div key={d.label} className="card text-center" style={{ borderColor: `${d.color}25` }}>
-              <div style={{ fontFamily: 'var(--font-display)', fontSize: '32px', fontWeight: 800, color: d.color }}>{d.count}</div>
-              <div className={`tag ${d.tagClass} mt-6`}>{d.label}</div>
-              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>target: {d.target}</div>
+          {/* Empty State */}
+          {!problems.length && !loading && (
+            <div className="text-center" style={{ padding: '80px 20px' }}>
+              <div style={{ fontSize: '64px', marginBottom: '16px' }}>🎯</div>
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: '20px', fontWeight: 800, marginBottom: '8px' }}>Ready to find your problems</div>
+              <div style={{ color: 'var(--text-secondary)', fontSize: '14px', maxWidth: '400px', margin: '0 auto' }}>
+                The AI will analyze your weak topics and recommend the most impactful problems to solve next
+              </div>
             </div>
-          ))}
-        </div>
-      )}
+          )}
 
-      {/* Empty State */}
-      {!problems.length && !loading && (
-        <div className="text-center" style={{ padding: '80px 20px' }}>
-          <div style={{ fontSize: '64px', marginBottom: '16px' }}>🎯</div>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: '20px', fontWeight: 800, marginBottom: '8px' }}>Ready to find your problems</div>
-          <div style={{ color: 'var(--text-secondary)', fontSize: '14px', maxWidth: '400px', margin: '0 auto' }}>
-            The AI will analyze your weak topics and recommend the most impactful problems to solve next
-          </div>
-        </div>
-      )}
-
-      {loading && (
-        <div className="text-center" style={{ padding: '60px' }}>
-          <div style={{ fontSize: '40px', marginBottom: '16px' }}>🔍</div>
-          <div style={{ color: 'var(--text-primary)', marginBottom: '8px', fontSize: '15px', fontWeight: 600 }}>Searching for perfect problems...</div>
-          <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Analyzing your weak areas and finding targeted problems</div>
-        </div>
+          {loading && (
+            <div className="text-center" style={{ padding: '60px' }}>
+              <div style={{ fontSize: '40px', marginBottom: '16px' }}>🔍</div>
+              <div style={{ color: 'var(--text-primary)', marginBottom: '8px', fontSize: '15px', fontWeight: 600 }}>Searching for perfect problems...</div>
+              <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Analyzing your weak areas and finding targeted problems</div>
+            </div>
+          )}
+        </>
       )}
 
       {/* Problems List */}

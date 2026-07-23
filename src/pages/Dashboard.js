@@ -198,97 +198,111 @@ const Dashboard = () => {
         )}
       </div>
 
-      {/* Charts Row */}
-      <div className="charts-grid mb-24">
-        {/* Radar Chart */}
-        <div className="card">
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: '17px', fontWeight: 800, marginBottom: '4px' }}>Topic Mastery</div>
-          <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>Performance across DSA domains</div>
-          <ResponsiveContainer width="100%" height={240}>
-            <RadarChart data={radarData}>
-              <PolarGrid stroke="rgba(255,255,255,0.04)" />
-              <PolarAngleAxis dataKey="topic" tick={{ fill: '#9CA3AF', fontSize: 11, fontWeight: 500 }} />
-              <Radar name="Score" dataKey="score" stroke="#00D4FF" fill="#00D4FF" fillOpacity={0.12} strokeWidth={2.5} />
-            </RadarChart>
-          </ResponsiveContainer>
-        </div>
+      {leetcodeData ? (
+        <>
+          {/* Charts Row */}
+          <div className="charts-grid mb-24">
+            {/* Radar Chart */}
+            <div className="card">
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: '17px', fontWeight: 800, marginBottom: '4px' }}>Topic Mastery</div>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>Performance across DSA domains</div>
+              <ResponsiveContainer width="100%" height={240}>
+                <RadarChart data={radarData}>
+                  <PolarGrid stroke="rgba(255,255,255,0.04)" />
+                  <PolarAngleAxis dataKey="topic" tick={{ fill: '#9CA3AF', fontSize: 11, fontWeight: 500 }} />
+                  <Radar name="Score" dataKey="score" stroke="#00D4FF" fill="#00D4FF" fillOpacity={0.12} strokeWidth={2.5} />
+                </RadarChart>
+              </ResponsiveContainer>
+            </div>
 
-        {/* Activity Chart */}
-        <div className="card">
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: '17px', fontWeight: 800, marginBottom: '4px' }}>Weekly Activity</div>
-          <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>Problems solved this week</div>
-          <ResponsiveContainer width="100%" height={240}>
-            <AreaChart data={weeklyActivity}>
-              <defs>
-                <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#00F2FE" stopOpacity={0.25} />
-                  <stop offset="100%" stopColor="#00F2FE" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <XAxis dataKey="day" tick={{ fill: '#9CA3AF', fontSize: 12 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: '#9CA3AF', fontSize: 11 }} axisLine={false} tickLine={false} />
-              <Tooltip 
-                contentStyle={{ 
-                  background: 'var(--bg-card-solid)', 
-                  border: '1px solid var(--border-bright)', 
-                  borderRadius: 12, 
-                  color: 'var(--text-primary)',
-                  boxShadow: '0 8px 30px rgba(0,0,0,0.5)',
-                  fontFamily: 'var(--font-body)'
-                }} 
-              />
-              <Area type="monotone" dataKey="solved" stroke="#00F2FE" strokeWidth={2.5} fill="url(#areaGrad)" />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      <SubmissionHeatmap recentSubmissions={leetcodeData?.recentSubmissions || []} />
-      <ContestHistory contestHistory={leetcodeData?.contestHistory || []} />
-      <RecentSubmissions recentSubmissions={leetcodeData?.recentSubmissions || []} />
-
-      {/* Strengths and Focus Areas */}
-      <div className="strengths-grid mb-24">
-        <div className="card">
-          <div style={{ fontSize: '16px', fontFamily: 'var(--font-display)', fontWeight: 800, marginBottom: '18px' }}>💪 Strong Areas</div>
-          <div className="flex-column" style={{ gap: '14px' }}>
-            {topStrong.map((t) => {
-              const pct = Math.round((t.solved / t.total) * 100);
-              return (
-                <div key={t.topic}>
-                  <div className="flex-row-between mb-6">
-                    <span style={{ fontSize: '14px', fontWeight: 600 }}>{t.topic}</span>
-                    <span className="tag tag-strong">{pct}%</span>
-                  </div>
-                  <div className="progress-bar">
-                    <div className="progress-fill" style={{ width: `${pct}%`, background: 'linear-gradient(90deg, var(--accent-green), #059669)' }} />
-                  </div>
-                </div>
-              );
-            })}
+            {/* Activity Chart */}
+            <div className="card">
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: '17px', fontWeight: 800, marginBottom: '4px' }}>Weekly Activity</div>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>Problems solved this week</div>
+              <ResponsiveContainer width="100%" height={240}>
+                <AreaChart data={weeklyActivity}>
+                  <defs>
+                    <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#00F2FE" stopOpacity={0.25} />
+                      <stop offset="100%" stopColor="#00F2FE" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <XAxis dataKey="day" tick={{ fill: '#9CA3AF', fontSize: 12 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fill: '#9CA3AF', fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <Tooltip 
+                    contentStyle={{ 
+                      background: 'var(--bg-card-solid)', 
+                      border: '1px solid var(--border-bright)', 
+                      borderRadius: 12, 
+                      color: 'var(--text-primary)',
+                      boxShadow: '0 8px 30px rgba(0,0,0,0.5)',
+                      fontFamily: 'var(--font-body)'
+                    }} 
+                  />
+                  <Area type="monotone" dataKey="solved" stroke="#00F2FE" strokeWidth={2.5} fill="url(#areaGrad)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
           </div>
-        </div>
-        
-        <div className="card">
-          <div style={{ fontSize: '16px', fontFamily: 'var(--font-display)', fontWeight: 800, marginBottom: '18px' }}>🎯 Focus Areas</div>
-          <div className="flex-column" style={{ gap: '14px' }}>
-            {topWeak.map((t) => {
-              const pct = Math.round((t.solved / t.total) * 100);
-              return (
-                <div key={t.topic}>
-                  <div className="flex-row-between mb-6">
-                    <span style={{ fontSize: '14px', fontWeight: 600 }}>{t.topic}</span>
-                    <span className="tag tag-weak">{pct}%</span>
-                  </div>
-                  <div className="progress-bar">
-                    <div className="progress-fill" style={{ width: `${pct}%`, background: 'linear-gradient(90deg, var(--accent-pink), #dc2626)' }} />
-                  </div>
-                </div>
-              );
-            })}
+
+          <SubmissionHeatmap recentSubmissions={leetcodeData?.recentSubmissions || []} />
+          <ContestHistory contestHistory={leetcodeData?.contestHistory || []} />
+          <RecentSubmissions recentSubmissions={leetcodeData?.recentSubmissions || []} />
+
+          {/* Strengths and Focus Areas */}
+          <div className="strengths-grid mb-24">
+            <div className="card">
+              <div style={{ fontSize: '16px', fontFamily: 'var(--font-display)', fontWeight: 800, marginBottom: '18px' }}>💪 Strong Areas</div>
+              <div className="flex-column" style={{ gap: '14px' }}>
+                {topStrong.map((t) => {
+                  const pct = Math.round((t.solved / t.total) * 100);
+                  return (
+                    <div key={t.topic}>
+                      <div className="flex-row-between mb-6">
+                        <span style={{ fontSize: '14px', fontWeight: 600 }}>{t.topic}</span>
+                        <span className="tag tag-strong">{pct}%</span>
+                      </div>
+                      <div className="progress-bar">
+                        <div className="progress-fill" style={{ width: `${pct}%`, background: 'linear-gradient(90deg, var(--accent-green), #059669)' }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            
+            <div className="card">
+              <div style={{ fontSize: '16px', fontFamily: 'var(--font-display)', fontWeight: 800, marginBottom: '18px' }}>🎯 Focus Areas</div>
+              <div className="flex-column" style={{ gap: '14px' }}>
+                {topWeak.map((t) => {
+                  const pct = Math.round((t.solved / t.total) * 100);
+                  return (
+                    <div key={t.topic}>
+                      <div className="flex-row-between mb-6">
+                        <span style={{ fontSize: '14px', fontWeight: 600 }}>{t.topic}</span>
+                        <span className="tag tag-weak">{pct}%</span>
+                      </div>
+                      <div className="progress-bar">
+                        <div className="progress-fill" style={{ width: `${pct}%`, background: 'linear-gradient(90deg, var(--accent-pink), #dc2626)' }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
+        </>
+      ) : (
+        <div className="card mb-24 text-center" style={{ padding: '40px 24px', border: '1px dashed var(--border-bright)' }}>
+          <span style={{ fontSize: '32px', display: 'block', marginBottom: '12px' }}>📊</span>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: '18px', fontWeight: 800, marginBottom: '6px' }}>
+            Sync LeetCode ID to View Progress Analysis & Charts
+          </div>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '14px', maxWidth: '480px', margin: '0 auto' }}>
+            Please sync your LeetCode profile to unlock Topic Mastery charts, Weekly Activity tracking, Submission Heatmap, and Strengths/Focus areas.
+          </p>
         </div>
-      </div>
+      )}
 
       {/* Topic Progress Table */}
       <div className="card">

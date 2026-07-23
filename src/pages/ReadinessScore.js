@@ -28,7 +28,7 @@ Respond in EXACTLY this JSON format (no extra text):
 Use the actual data to calculate realistic scores. Overall should be weighted average.`;
 
 const ReadinessScore = () => {
-  const { dsaProgress } = useApp();
+  const { dsaProgress, leetcodeData } = useApp();
   const [score, setScore] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -84,41 +84,55 @@ Your preparation level indicates you are ${mockScore >= 70 ? 'well-prepared' : '
         <p className="section-subtitle">AI-powered assessment of your placement interview preparedness</p>
       </div>
 
-      {/* Action */}
-      <div className="card mb-24" style={{ borderColor: 'rgba(0, 242, 254, 0.25)' }}>
-        <div className="flex-row-between flex-wrap gap-12">
-          <div>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: '17px', fontWeight: 800 }}>Readiness Assessment</div>
-            <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '2px' }}>Comprehensive analysis across all DSA topics</div>
+      {!leetcodeData ? (
+        <div className="card text-center" style={{ padding: '50px 24px', border: '1px dashed var(--border-bright)' }}>
+          <span style={{ fontSize: '44px', display: 'block', marginBottom: '14px' }}>🏆</span>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: '18px', fontWeight: 800, marginBottom: '6px' }}>
+            Sync LeetCode ID to Calculate Readiness Score
           </div>
-          <button className="btn-primary" onClick={calcScore} disabled={loading}>
-            {loading ? (
-              <>
-                <span className="animate-spin" style={{ width: 16, height: 16, border: '2px solid rgba(0,0,0,0.3)', borderTopColor: '#000', borderRadius: '50%', display: 'inline-block' }} />
-                Calculating...
-              </>
-            ) : '🏆 Calculate Score'}
-          </button>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '14px', maxWidth: '480px', margin: '0 auto 16px' }}>
+            Please sync your LeetCode profile in the Dashboard to assess your placement interview preparedness and calculate your readiness score.
+          </p>
         </div>
-      </div>
-
-      {!score && !loading && (
-        <div className="text-center" style={{ padding: '80px 20px' }}>
-          <div style={{ fontSize: '64px', marginBottom: '16px' }}>🏆</div>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: '20px', fontWeight: 800, marginBottom: '8px' }}>Know your placement readiness</div>
-          <div style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Get an honest score across all DSA topics with actionable next steps</div>
-        </div>
-      )}
-
-      {loading && (
-        <div className="text-center" style={{ padding: '60px' }}>
-          <div style={{ display: 'inline-flex', gap: '8px', marginBottom: '16px' }}>
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="dot-accent dot-purple animate-pulse" style={{ width: 12, height: 12, animationDelay: `${i * 0.2}s` }} />
-            ))}
+      ) : (
+        <>
+          {/* Action */}
+          <div className="card mb-24" style={{ borderColor: 'rgba(0, 242, 254, 0.25)' }}>
+            <div className="flex-row-between flex-wrap gap-12">
+              <div>
+                <div style={{ fontFamily: 'var(--font-display)', fontSize: '17px', fontWeight: 800 }}>Readiness Assessment</div>
+                <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '2px' }}>Comprehensive analysis across all DSA topics</div>
+              </div>
+              <button className="btn-primary" onClick={calcScore} disabled={loading}>
+                {loading ? (
+                  <>
+                    <span className="animate-spin" style={{ width: 16, height: 16, border: '2px solid rgba(0,0,0,0.3)', borderTopColor: '#000', borderRadius: '50%', display: 'inline-block' }} />
+                    Calculating...
+                  </>
+                ) : '🏆 Calculate Score'}
+              </button>
+            </div>
           </div>
-          <div style={{ color: 'var(--text-secondary)', fontSize: '14.5px', fontWeight: 500 }}>Calculating your readiness score...</div>
-        </div>
+
+          {!score && !loading && (
+            <div className="text-center" style={{ padding: '80px 20px' }}>
+              <div style={{ fontSize: '64px', marginBottom: '16px' }}>🏆</div>
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: '20px', fontWeight: 800, marginBottom: '8px' }}>Know your placement readiness</div>
+              <div style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Get an honest score across all DSA topics with actionable next steps</div>
+            </div>
+          )}
+
+          {loading && (
+            <div className="text-center" style={{ padding: '60px' }}>
+              <div style={{ display: 'inline-flex', gap: '8px', marginBottom: '16px' }}>
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="dot-accent dot-purple animate-pulse" style={{ width: 12, height: 12, animationDelay: `${i * 0.2}s` }} />
+                ))}
+              </div>
+              <div style={{ color: 'var(--text-secondary)', fontSize: '14.5px', fontWeight: 500 }}>Calculating your readiness score...</div>
+            </div>
+          )}
+        </>
       )}
 
       {score && !loading && (

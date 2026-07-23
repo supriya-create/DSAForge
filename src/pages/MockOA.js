@@ -20,7 +20,7 @@ HINT: [One helpful hint]
 Generate all 3 problems. Make them realistic and interview-appropriate for ${company}.`;
 
 const MockOA = () => {
-  const { dsaProgress, generateMockOA, fetchLatestMockOA } = useApp();
+  const { dsaProgress, generateMockOA, fetchLatestMockOA, leetcodeData } = useApp();
   const [company, setCompany] = useState('Amazon');
   const [difficulty, setDifficulty] = useState('Medium');
   const [problems, setProblems] = useState([]);
@@ -101,35 +101,49 @@ const MockOA = () => {
         <p className="section-subtitle">Practice company-style online assessments with AI-generated problems</p>
       </div>
 
-      {/* Config Card */}
-      <div className="card mb-24" style={{ borderColor: 'rgba(139, 92, 246, 0.25)' }}>
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: '17px', fontWeight: 800, marginBottom: '16px' }}>Configure OA</div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '16px' }}>
-          <div>
-            <label className="mb-6" style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'block', fontWeight: 600 }}>Company</label>
-            <select value={company} onChange={e => setCompany(e.target.value)} className="input-field" style={{ padding: '10px 14px' }}>
-              {companies.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
+      {!leetcodeData ? (
+        <div className="card text-center" style={{ padding: '50px 24px', border: '1px dashed var(--border-bright)' }}>
+          <span style={{ fontSize: '44px', display: 'block', marginBottom: '14px' }}>📝</span>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: '18px', fontWeight: 800, marginBottom: '6px' }}>
+            Sync LeetCode ID to Generate Mock OA
           </div>
-          <div>
-            <label className="mb-6" style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'block', fontWeight: 600 }}>Difficulty Level</label>
-            <select value={difficulty} onChange={e => setDifficulty(e.target.value)} className="input-field" style={{ padding: '10px 14px' }}>
-              {['Easy', 'Medium', 'Hard', 'Mixed'].map(d => <option key={d} value={d}>{d}</option>)}
-            </select>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '14px', maxWidth: '480px', margin: '0 auto 16px' }}>
+            Please sync your LeetCode profile in the Dashboard to practice company-style online assessments tailored to your weak topics.
+          </p>
+        </div>
+      ) : (
+        <>
+          {/* Config Card */}
+          <div className="card mb-24" style={{ borderColor: 'rgba(139, 92, 246, 0.25)' }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: '17px', fontWeight: 800, marginBottom: '16px' }}>Configure OA</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '16px' }}>
+              <div>
+                <label className="mb-6" style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'block', fontWeight: 600 }}>Company</label>
+                <select value={company} onChange={e => setCompany(e.target.value)} className="input-field" style={{ padding: '10px 14px' }}>
+                  {companies.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="mb-6" style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'block', fontWeight: 600 }}>Difficulty Level</label>
+                <select value={difficulty} onChange={e => setDifficulty(e.target.value)} className="input-field" style={{ padding: '10px 14px' }}>
+                  {['Easy', 'Medium', 'Hard', 'Mixed'].map(d => <option key={d} value={d}>{d}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="mb-16" style={{ background: 'rgba(3,2,7,0.3)', border: '1px solid var(--border)', borderRadius: '10px', padding: '12px 16px', fontSize: '13px', color: 'var(--text-secondary)' }}>
+              📌 Will focus on your weak topics: <span style={{ color: 'var(--accent-orange)', fontWeight: 600 }}>{weakTopics}</span>
+            </div>
+            <button className="btn-primary" onClick={generateOA} disabled={loading}>
+              {loading ? (
+                <>
+                  <span className="animate-spin" style={{ width: 16, height: 16, border: '2px solid rgba(0,0,0,0.3)', borderTopColor: '#000', borderRadius: '50%', display: 'inline-block' }} />
+                  Generating...
+                </>
+              ) : `📝 Generate ${company} OA`}
+            </button>
           </div>
-        </div>
-        <div className="mb-16" style={{ background: 'rgba(3,2,7,0.3)', border: '1px solid var(--border)', borderRadius: '10px', padding: '12px 16px', fontSize: '13px', color: 'var(--text-secondary)' }}>
-          📌 Will focus on your weak topics: <span style={{ color: 'var(--accent-orange)', fontWeight: 600 }}>{weakTopics}</span>
-        </div>
-        <button className="btn-primary" onClick={generateOA} disabled={loading}>
-          {loading ? (
-            <>
-              <span className="animate-spin" style={{ width: 16, height: 16, border: '2px solid rgba(0,0,0,0.3)', borderTopColor: '#000', borderRadius: '50%', display: 'inline-block' }} />
-              Generating...
-            </>
-          ) : `📝 Generate ${company} OA`}
-        </button>
-      </div>
+        </>
+      )}
 
       {/* Problems */}
       {problems.length > 0 && !loading && (

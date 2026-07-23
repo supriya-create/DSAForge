@@ -5,16 +5,16 @@ const AppContext = createContext();
 const API_BASE = process.env.REACT_APP_API_URL || '';
 
 const DEFAULT_TOPICS = [
-  { topic: 'Arrays', solved: 35, easy: 20, medium: 12, hard: 3, total: 80 },
-  { topic: 'Strings', solved: 28, easy: 15, medium: 10, hard: 3, total: 60 },
-  { topic: 'Linked Lists', solved: 18, easy: 10, medium: 6, hard: 2, total: 40 },
-  { topic: 'Trees', solved: 10, easy: 5, medium: 4, hard: 1, total: 50 },
-  { topic: 'Graphs', solved: 4, easy: 2, medium: 2, hard: 0, total: 55 },
-  { topic: 'Dynamic Programming', solved: 6, easy: 3, medium: 2, hard: 1, total: 70 },
-  { topic: 'Heaps', solved: 8, easy: 4, medium: 3, hard: 1, total: 30 },
-  { topic: 'Sorting', solved: 22, easy: 12, medium: 8, hard: 2, total: 35 },
-  { topic: 'Binary Search', solved: 14, easy: 8, medium: 5, hard: 1, total: 40 },
-  { topic: 'Recursion', solved: 12, easy: 7, medium: 4, hard: 1, total: 35 },
+  { topic: 'Arrays', solved: 0, easy: 0, medium: 0, hard: 0, total: 80 },
+  { topic: 'Strings', solved: 0, easy: 0, medium: 0, hard: 0, total: 60 },
+  { topic: 'Linked Lists', solved: 0, easy: 0, medium: 0, hard: 0, total: 40 },
+  { topic: 'Trees', solved: 0, easy: 0, medium: 0, hard: 0, total: 50 },
+  { topic: 'Graphs', solved: 0, easy: 0, medium: 0, hard: 0, total: 55 },
+  { topic: 'Dynamic Programming', solved: 0, easy: 0, medium: 0, hard: 0, total: 70 },
+  { topic: 'Heaps', solved: 0, easy: 0, medium: 0, hard: 0, total: 30 },
+  { topic: 'Sorting', solved: 0, easy: 0, medium: 0, hard: 0, total: 35 },
+  { topic: 'Binary Search', solved: 0, easy: 0, medium: 0, hard: 0, total: 40 },
+  { topic: 'Recursion', solved: 0, easy: 0, medium: 0, hard: 0, total: 35 },
 ];
 
 export const AppProvider = ({ children }) => {
