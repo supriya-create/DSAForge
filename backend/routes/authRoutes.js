@@ -35,6 +35,7 @@ const validateLogin = [
 // Public routes
 router.post('/register', validateRegister, authController.register);
 router.post('/login', validateLogin, authController.login);
+router.post('/google', authController.googleLogin);
 
 // Protected routes
 router.get('/me', authenticate, authController.getCurrentUser);

@@ -3,6 +3,8 @@ const User = require('../models/User');
 const { LeetcodeStats } = require('../models');
 const { syncLeetCodeProfile } = require('../services/leetcodeService');
 const { validationResult } = require('express-validator');
+const { validateEmailIsReal } = require('../services/emailValidator');
+const { OAuth2Client } = require('google-auth-library');
 
 const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
 
@@ -51,6 +53,15 @@ exports.register = async (req, res) => {
     }
 
     const { name, email, password, college, year } = req.body;
+
+    // Verify email is a real address with valid domain & MX records
+    const isEmailReal = await validateEmailIsReal(email);
+    if (!isEmailReal) {
+      return res.status(400).json({
+        success: false,
+        message: 'The email address domain is invalid, inactive, or disposable. Please use a real email ID.'
+      });
+    }
 
     // Check if user already exists
     let user = await User.findOne({ email });
@@ -336,6 +347,121 @@ exports.verifyToken = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Server error verifying token',
+      error: error.message
+    });
+  }
+};
+
+// Google Sign-In / Login
+exports.googleLogin = async (req, res) => {
+  try {
+    const { idToken } = req.body;
+    if (!idToken) {
+      return res.status(400).json({
+        success: false,
+        message: 'Google ID Token is required'
+      });
+    }
+
+    // Verify Google ID Token
+    // We try to verify using process.env.GOOGLE_CLIENT_ID
+    // If not configured, we fallback to a default client ID for local testing.
+    const clientId = process.env.GOOGLE_CLIENT_ID || '822360877011-8vobuh7cqubocn3h39l91h5j5q76o26d.apps.googleusercontent.com';
+    const localClient = new OAuth2Client(clientId);
+    
+    let payload;
+    try {
+      const ticket = await localClient.verifyIdToken({
+        idToken,
+        audience: clientId
+      });
+      payload = ticket.getPayload();
+    } catch (verifyError) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid Google ID Token',
+        error: verifyError.message
+      });
+    }
+
+    const { email, name, picture, email_verified } = payload;
+
+    if (!email_verified) {
+      return res.status(400).json({
+        success: false,
+        message: 'Google email is not verified'
+      });
+    }
+
+    // Find user by email
+    let user = await User.findOne({ email });
+    let isNewUser = false;
+
+    if (!user) {
+      isNewUser = true;
+      // Generate a secure random password since schema requires password
+      const crypto = require('crypto');
+      const randomPassword = crypto.randomBytes(16).toString('hex');
+      
+      // Create user
+      user = new User({
+        name,
+        email,
+        password: randomPassword,
+        avatar: picture || (name ? name[0].toUpperCase() : 'G'),
+        leetcode: null,
+        college: null,
+        year: null
+      });
+
+      await user.save();
+    } else {
+      // User exists, update lastLogin and potentially avatar if it was null
+      if (!user.avatar && picture) {
+        user.avatar = picture;
+      }
+      user.lastLogin = new Date();
+      await user.save();
+    }
+
+    // Generate JWT token for session
+    const token = generateToken(user._id);
+
+    // Set HttpOnly cookie
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    });
+
+    const cachedStats = await LeetcodeStats.findOne({ userId: user._id }).lean();
+    const username = user.leetcodeUsername || user.leetcode || null;
+    const shouldSync = !cachedStats || !cachedStats.lastSynced || (Date.now() - new Date(cachedStats.lastSynced).getTime()) > TWENTY_FOUR_HOURS;
+
+    if (shouldSync && username) {
+      void (async () => {
+        try {
+          await syncLeetCodeProfile({ userId: user._id, username });
+        } catch (error) {
+          console.error('Background LeetCode sync failed during Google login:', error.message);
+        }
+      })();
+    }
+
+    res.status(200).json({
+      success: true,
+      message: isNewUser ? 'User registered and logged in via Google successfully' : 'Login successful via Google',
+      token,
+      user: user.toJSON(),
+      leetcodeData: buildLeetCodePayload(cachedStats),
+      leetcodeSyncTriggered: Boolean(shouldSync && username)
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Server error during Google authentication',
       error: error.message
     });
   }

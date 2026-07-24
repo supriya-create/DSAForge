@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 
 const AuthPage = () => {
-  const { login, registerUser, loginUser, isLoggedIn } = useApp();
+  const { login, registerUser, loginUser, loginWithGoogle, isLoggedIn } = useApp();
   const [mode, setMode] = useState('login');
   const [form, setForm] = useState({ name: '', email: '', password: '' });
   const [loading, setLoading] = useState(false);
@@ -33,13 +33,57 @@ const AuthPage = () => {
     }
   };
 
-  const handleGoogle = async () => {
-    setLoading(true);
-    setError('');
-    await new Promise(r => setTimeout(r, 600));
-    login({ name: 'Aryan Sharma', email: 'aryan@gmail.com', avatar: 'A', leetcode: 'aryan_codes', college: 'IIT Delhi', year: '3rd Year' });
-    setLoading(false);
-  };
+  useEffect(() => {
+    const handleGoogleCredentialResponse = async (response) => {
+      setLoading(true);
+      setError('');
+      try {
+        await loginWithGoogle(response.credential);
+      } catch (err) {
+        console.error(err);
+        setError(err.message || 'Google authentication failed. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const initializeGoogleSignIn = () => {
+      if (window.google) {
+        const clientId = process.env.REACT_APP_GOOGLE_CLIENT_ID || '822360877011-8vobuh7cqubocn3h39l91h5j5q76o26d.apps.googleusercontent.com';
+        
+        window.google.accounts.id.initialize({
+          client_id: clientId,
+          callback: handleGoogleCredentialResponse,
+        });
+
+        const btnContainer = document.getElementById('google-signin-button');
+        if (btnContainer) {
+          window.google.accounts.id.renderButton(
+            btnContainer,
+            {
+              theme: 'outline',
+              size: 'large',
+              width: btnContainer.offsetWidth || 420,
+              text: 'continue_with',
+              shape: 'rectangular',
+            }
+          );
+        }
+      }
+    };
+
+    // Load Google Identity Services script if not already present
+    if (window.google) {
+      initializeGoogleSignIn();
+    } else {
+      const script = document.createElement('script');
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.async = true;
+      script.defer = true;
+      script.onload = initializeGoogleSignIn;
+      document.head.appendChild(script);
+    }
+  }, [mode, loginWithGoogle]);
 
   return (
     <div className="flex-row-between flex-wrap w-full" style={{ minHeight: '100vh', background: 'var(--bg-deep)', position: 'relative', overflow: 'hidden' }}>
@@ -113,18 +157,8 @@ const AuthPage = () => {
             {mode === 'login' ? 'Continue your DSA practice streak' : 'Register to start tracking your DSA preparation progress'}
           </p>
 
-          {/* Google Button */}
-          <button onClick={handleGoogle} disabled={loading} style={{
-            width: '100%', padding: '12.5px', borderRadius: '12px',
-            background: 'var(--bg-card2)', border: '1px solid var(--border)',
-            color: 'var(--text-primary)', fontSize: '14px', fontWeight: 600,
-            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            gap: '10px', marginBottom: '20px', fontFamily: 'var(--font-body)',
-            transition: 'all 0.25s'
-          }}>
-            <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-            Continue with Google
-          </button>
+          {/* Google Sign-In Button Container */}
+          <div id="google-signin-button" style={{ width: '100%', marginBottom: '20px', display: 'flex', justifyContent: 'center' }} />
 
           <div className="flex-align-center mb-20" style={{ gap: '12px' }}>
             <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />

@@ -116,6 +116,16 @@ export const AppProvider = ({ children }) => {
     return data;
   };
 
+  const loginWithGoogle = async (idToken) => {
+    const data = await request('/api/auth/google', {
+      method: 'POST',
+      body: JSON.stringify({ idToken })
+    });
+    setToken(data.token);
+    login(data.user, data.leetcodeData || null);
+    return data;
+  };
+
   const updateProfile = async (profileData) => {
     const data = await request('/api/auth/profile', {
       method: 'PUT',
@@ -379,7 +389,7 @@ export const AppProvider = ({ children }) => {
 
   const value = useMemo(() => ({
     user, isLoggedIn, login, logout,
-    authToken, registerUser, loginUser, updateProfile,
+    authToken, registerUser, loginUser, loginWithGoogle, updateProfile,
     runAIAnalysis, solveAIDoubt, generateAIRoadmap,
     fetchLatestAIAnalysis, fetchDoubtHistory, fetchLatestRoadmap,
     generateMockOA, fetchLatestMockOA, generateProblems, fetchLatestProblems,
@@ -389,7 +399,7 @@ export const AppProvider = ({ children }) => {
     activeTab, setActiveTab,
     totalSolved,
     leetcodeData, leetcodeLoading, leetcodeError, fetchLeetCodeData
-  }), [user, isLoggedIn, login, logout, authToken, registerUser, loginUser, updateProfile, runAIAnalysis, solveAIDoubt, generateAIRoadmap, fetchLatestAIAnalysis, fetchDoubtHistory, fetchLatestRoadmap, generateMockOA, fetchLatestMockOA, generateProblems, fetchLatestProblems, computedDsaProgress, updateProgress, addTopic, updateStreak, weeklyActivity, activeTab, setActiveTab, totalSolved, leetcodeData, leetcodeLoading, leetcodeError, fetchLeetCodeData]);
+  }), [user, isLoggedIn, login, logout, authToken, registerUser, loginUser, loginWithGoogle, updateProfile, runAIAnalysis, solveAIDoubt, generateAIRoadmap, fetchLatestAIAnalysis, fetchDoubtHistory, fetchLatestRoadmap, generateMockOA, fetchLatestMockOA, generateProblems, fetchLatestProblems, computedDsaProgress, updateProgress, addTopic, updateStreak, weeklyActivity, activeTab, setActiveTab, totalSolved, leetcodeData, leetcodeLoading, leetcodeError, fetchLeetCodeData]);
 
   return (
     <AppContext.Provider value={value}>
