@@ -49,7 +49,7 @@ const AuthPage = () => {
 
     const initializeGoogleSignIn = () => {
       if (window.google) {
-        const clientId = process.env.REACT_APP_GOOGLE_CLIENT_ID || '822360877011-8vobuh7cqubocn3h39l91h5j5q76o26d.apps.googleusercontent.com';
+        const clientId = process.env.REACT_APP_GOOGLE_CLIENT_ID || '679460937668-ic577i6t2f1gmu5vj9ga2kl3ka3v917g.apps.googleusercontent.com';
         
         window.google.accounts.id.initialize({
           client_id: clientId,
