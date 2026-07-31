@@ -1,24 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 
-const OA_PROMPT = (company, difficulty, topics) => `Generate a mock Online Assessment (OA) for ${company} with these specifications:
-- Difficulty: ${difficulty}
-- Focus topics: ${topics}
-- Time limit: 90 minutes
-- 3 problems total
-
-For each problem, respond in EXACTLY this format:
-PROBLEM [N]: [Problem Title]
-DIFFICULTY: [Easy/Medium/Hard]
-TOPIC: [Topic]
-TIME: [Expected minutes to solve]
-DESCRIPTION: [2-3 sentence problem description — no code]
-CONSTRAINTS: [Key constraints]
-HINT: [One helpful hint]
-===
-
-Generate all 3 problems. Make them realistic and interview-appropriate for ${company}.`;
-
 const MockOA = () => {
   const { dsaProgress, generateMockOA, fetchLatestMockOA, leetcodeData } = useApp();
   const [company, setCompany] = useState('Amazon');

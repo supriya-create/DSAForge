@@ -1,24 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 
-const PROBLEMS_PROMPT = (progress, platform) => `You are a DSA coach recommending problems for a student preparing for placements.
-
-Student's DSA progress:
-${progress.map(t => `- ${t.topic}: ${Math.round((t.solved/t.total)*100)}% complete (${t.solved} solved)`).join('\n')}
-
-Recommend exactly 6 problems from ${platform}: 3 Easy, 2 Medium, 1 Hard.
-Focus on their weakest topics (lowest completion %).
-
-For each problem, respond in this EXACT format (no extra text):
-PROBLEM: [Problem Title]
-LEVEL: [Easy/Medium/Hard]
-TOPIC: [Topic Name]
-URL: [${platform === 'LeetCode' ? 'https://leetcode.com/problems/problem-name' : 'https://www.geeksforgeeks.org/problem-name'}]
-WHY: [One sentence explaining why this problem is recommended for them]
----
-
-Recommend exactly 6 problems following this format strictly.`;
-
 const Problems = () => {
   const { dsaProgress, generateProblems: runGenerateProblems, fetchLatestProblems, leetcodeData } = useApp();
   const [problems, setProblems] = useState([]);

@@ -1,29 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 
-const DOUBT_PROMPT = (code, question) => `You are a DSA expert and coding mentor. Analyze this code and ${question ? `answer: "${question}"` : 'provide a complete analysis'}.
-
-Code:
-\`\`\`
-${code}
-\`\`\`
-
-Provide a clear analysis covering:
-
-**TIME COMPLEXITY**: State the Big O time complexity with explanation.
-
-**SPACE COMPLEXITY**: State the Big O space complexity with explanation.
-
-**CODE LOGIC**: Explain what the code does step by step (be concise).
-
-**BUGS & MISTAKES**: List any bugs, edge cases not handled, or potential issues. If none, say "No major issues found."
-
-**OPTIMIZATION**: Suggest 1-2 specific optimizations if possible with the improved approach name.
-
-**VERDICT**: One sentence summary of code quality.
-
-Keep each section concise and practical. Use specific Big O notation.`;
-
 const DoubtSolver = () => {
   const { solveAIDoubt, fetchDoubtHistory } = useApp();
   const [code, setCode] = useState(`// Paste your code here
