@@ -1,12 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 
+const PASSWORD_PATTERN = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
+const passwordError = 'Password must be at least 8 characters and include uppercase, lowercase, a number, and a special character.';
+
 const AuthPage = () => {
   const { login, registerUser, loginUser, loginWithGoogle, isLoggedIn } = useApp();
   const [mode, setMode] = useState('login');
   const [form, setForm] = useState({ name: '', email: '', password: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Google client ID must come from the environment only (no hardcoded ID).
+  const googleClientId = process.env.REACT_APP_GOOGLE_CLIENT_ID || null;
 
   useEffect(() => {
     if (isLoggedIn) {
@@ -17,8 +23,13 @@ const AuthPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
     setError('');
+    // Client-side password strength check on signup (mirrors backend policy).
+    if (mode === 'signup' && !PASSWORD_PATTERN.test(form.password)) {
+      setError(passwordError);
+      return;
+    }
+    setLoading(true);
     try {
       if (mode === 'login') {
         await loginUser({ email: form.email, password: form.password });
@@ -47,12 +58,13 @@ const AuthPage = () => {
       }
     };
 
+    // Only initialize Google sign-in when a client ID is configured.
+    if (!googleClientId) return;
+
     const initializeGoogleSignIn = () => {
       if (window.google) {
-        const clientId = process.env.REACT_APP_GOOGLE_CLIENT_ID || '679460937668-ic577i6t2f1gmu5vj9ga2kl3ka3v917g.apps.googleusercontent.com';
-        
         window.google.accounts.id.initialize({
-          client_id: clientId,
+          client_id: googleClientId,
           callback: handleGoogleCredentialResponse,
         });
 
@@ -83,7 +95,7 @@ const AuthPage = () => {
       script.onload = initializeGoogleSignIn;
       document.head.appendChild(script);
     }
-  }, [mode, loginWithGoogle]);
+  }, [mode, loginWithGoogle, googleClientId]);
 
   return (
     <div className="flex-row-between flex-wrap w-full" style={{ minHeight: '100vh', background: 'var(--bg-deep)', position: 'relative', overflow: 'hidden' }}>
@@ -157,14 +169,17 @@ const AuthPage = () => {
             {mode === 'login' ? 'Continue your DSA practice streak' : 'Register to start tracking your DSA preparation progress'}
           </p>
 
-          {/* Google Sign-In Button Container */}
-          <div id="google-signin-button" style={{ width: '100%', marginBottom: '20px', display: 'flex', justifyContent: 'center' }} />
-
-          <div className="flex-align-center mb-20" style={{ gap: '12px' }}>
-            <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
-            <span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>or</span>
-            <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
-          </div>
+          {/* Google Sign-In Button Container (only when a client ID is configured) */}
+          {googleClientId && (
+            <>
+              <div id="google-signin-button" style={{ width: '100%', marginBottom: '20px', display: 'flex', justifyContent: 'center' }} />
+              <div className="flex-align-center mb-20" style={{ gap: '12px' }}>
+                <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+                <span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>or</span>
+                <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+              </div>
+            </>
+          )}
 
           {error && (
             <div className="mb-20 text-center" style={{

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider, useApp } from './context/AppContext';
 import AuthPage from './pages/AuthPage';
 import Sidebar from './components/Sidebar';
@@ -12,8 +13,11 @@ import ReadinessScore from './pages/ReadinessScore';
 import DoubtSolver from './pages/DoubtSolver';
 import './styles/global.css';
 
+// Architecture change: navigation moved from a single activeTab state to React
+// Router routes. Each page is now a first-class route, so deep links, browser
+// history/back, and refresh all work. The visual appearance is unchanged.
 const MainApp = () => {
-  const { isLoggedIn, activeTab, initializing } = useApp();
+  const { isLoggedIn, initializing } = useApp();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // While the session is being resolved from the httpOnly cookie, render
@@ -23,17 +27,6 @@ const MainApp = () => {
   }
 
   if (!isLoggedIn) return <AuthPage />;
-
-  const pages = {
-    dashboard: <Dashboard />,
-    tracker: <DSATracker />,
-    analysis: <AIAnalysis />,
-    roadmap: <Roadmap />,
-    problems: <Problems />,
-    mockoa: <MockOA />,
-    readiness: <ReadinessScore />,
-    doubt: <DoubtSolver />,
-  };
 
   return (
     <div className="app-container">
@@ -49,8 +42,8 @@ const MainApp = () => {
       </div>
 
       {/* Sidebar mobile overlay */}
-      <div 
-        className={`sidebar-overlay ${sidebarOpen ? 'show' : ''}`} 
+      <div
+        className={`sidebar-overlay ${sidebarOpen ? 'show' : ''}`}
         onClick={() => setSidebarOpen(false)}
       />
 
@@ -59,7 +52,17 @@ const MainApp = () => {
 
       {/* Main Page Content */}
       <main className="main-content">
-        {pages[activeTab] || <Dashboard />}
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/tracker" element={<DSATracker />} />
+          <Route path="/analysis" element={<AIAnalysis />} />
+          <Route path="/roadmap" element={<Roadmap />} />
+          <Route path="/problems" element={<Problems />} />
+          <Route path="/mockoa" element={<MockOA />} />
+          <Route path="/readiness" element={<ReadinessScore />} />
+          <Route path="/doubt" element={<DoubtSolver />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
       </main>
     </div>
   );
@@ -67,7 +70,9 @@ const MainApp = () => {
 
 const App = () => (
   <AppProvider>
-    <MainApp />
+    <BrowserRouter>
+      <MainApp />
+    </BrowserRouter>
   </AppProvider>
 );
 

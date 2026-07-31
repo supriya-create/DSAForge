@@ -6,6 +6,16 @@ const { loginLimiter, registerLimiter, googleLimiter } = require('../middleware/
 
 const router = express.Router();
 
+// Password strength policy (min 8, upper, lower, number, special char).
+// Factory returns a fresh validator chain for a given field name.
+const PASSWORD_PATTERN = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
+const strengthFor = (field) =>
+  body(field)
+    .isLength({ min: 8 })
+    .withMessage('Password must be at least 8 characters')
+    .matches(PASSWORD_PATTERN)
+    .withMessage('Password must include uppercase, lowercase, a number, and a special character');
+
 // Validation middleware
 const validateRegister = [
   body('name')
@@ -18,9 +28,12 @@ const validateRegister = [
     .isEmail()
     .withMessage('Please provide a valid email')
     .normalizeEmail(),
-  body('password')
-    .isLength({ min: 6 })
-    .withMessage('Password must be at least 6 characters')
+  strengthFor('password')
+];
+
+const validateChangePassword = [
+  body('currentPassword').notEmpty().withMessage('Current password is required'),
+  strengthFor('newPassword')
 ];
 
 const validateLogin = [
@@ -41,7 +54,7 @@ router.post('/google', googleLimiter, authController.googleLogin);
 // Protected routes
 router.get('/me', authenticate, authController.getCurrentUser);
 router.put('/profile', authenticate, authController.updateProfile);
-router.post('/change-password', loginLimiter, authenticate, authController.changePassword);
+router.post('/change-password', loginLimiter, authenticate, validateChangePassword, authController.changePassword);
 router.post('/verify-token', authenticate, authController.verifyToken);
 router.post('/logout', authenticate, authController.logout);
 

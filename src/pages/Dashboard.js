@@ -64,8 +64,9 @@ const Dashboard = () => {
     leetcodeData?.lastSynced
   );
 
-  const radarData = dsaProgress.slice(0, 8).map(t => ({
-    topic: t.topic.split(' ')[0],
+  // Radar chart shows ALL topics with full names (no truncation to first word).
+  const radarData = dsaProgress.map(t => ({
+    topic: t.topic,
     score: Math.round((t.solved / t.total) * 100)
   }));
 
@@ -206,10 +207,10 @@ const Dashboard = () => {
             <div className="card">
               <div style={{ fontFamily: 'var(--font-display)', fontSize: '17px', fontWeight: 800, marginBottom: '4px' }}>Topic Mastery</div>
               <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>Performance across DSA domains</div>
-              <ResponsiveContainer width="100%" height={240}>
-                <RadarChart data={radarData}>
+              <ResponsiveContainer width="100%" height={300}>
+                <RadarChart data={radarData} outerRadius="72%">
                   <PolarGrid stroke="rgba(255,255,255,0.04)" />
-                  <PolarAngleAxis dataKey="topic" tick={{ fill: '#9CA3AF', fontSize: 11, fontWeight: 500 }} />
+                  <PolarAngleAxis dataKey="topic" tick={{ fill: '#9CA3AF', fontSize: 10, fontWeight: 500 }} />
                   <Radar name="Score" dataKey="score" stroke="#00D4FF" fill="#00D4FF" fillOpacity={0.12} strokeWidth={2.5} />
                 </RadarChart>
               </ResponsiveContainer>

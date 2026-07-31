@@ -250,14 +250,16 @@ exports.updateProfile = async (req, res) => {
 // Change Password
 exports.changePassword = async (req, res) => {
   try {
-    const { currentPassword, newPassword } = req.body;
-
-    if (!currentPassword || !newPassword) {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
       return res.status(400).json({
         success: false,
-        message: 'Current password and new password are required'
+        message: 'Validation failed',
+        errors: errors.array()
       });
     }
+
+    const { currentPassword, newPassword } = req.body;
 
     const user = await User.findById(req.userId).select('+password');
     if (!user) {
