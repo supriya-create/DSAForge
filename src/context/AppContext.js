@@ -204,6 +204,11 @@ export const AppProvider = ({ children }) => {
     return await request('/api/ai/problems', { method: 'GET' });
   }, [request]);
 
+  // Real server-side readiness assessment (no fabricated data).
+  const calculateReadiness = useCallback(async () => {
+    return await request('/api/readiness', { method: 'POST', body: JSON.stringify({}) });
+  }, [request]);
+
   // On mount, resolve the session from the httpOnly cookie. If there is no
   // (valid) cookie, /me returns 401 and the user stays logged out.
   useEffect(() => {
@@ -370,6 +375,7 @@ export const AppProvider = ({ children }) => {
     runAIAnalysis, solveAIDoubt, generateAIRoadmap,
     fetchLatestAIAnalysis, fetchDoubtHistory, fetchLatestRoadmap,
     generateMockOA, fetchLatestMockOA, generateProblems, fetchLatestProblems,
+    calculateReadiness,
     dsaProgress, updateProgress, addTopic,
     streak, setStreak: updateStreak,
     weeklyActivity,
@@ -377,7 +383,7 @@ export const AppProvider = ({ children }) => {
     totalSolved,
     leetcodeData, leetcodeLoading, leetcodeError, fetchLeetCodeData,
     initializing,
-  }), [user, isLoggedIn, login, logout, registerUser, loginUser, loginWithGoogle, updateProfile, runAIAnalysis, solveAIDoubt, generateAIRoadmap, fetchLatestAIAnalysis, fetchDoubtHistory, fetchLatestRoadmap, generateMockOA, fetchLatestMockOA, generateProblems, fetchLatestProblems, dsaProgress, updateProgress, addTopic, updateStreak, weeklyActivity, activeTab, totalSolved, leetcodeData, leetcodeLoading, leetcodeError, fetchLeetCodeData, initializing]);
+  }), [user, isLoggedIn, login, logout, registerUser, loginUser, loginWithGoogle, updateProfile, runAIAnalysis, solveAIDoubt, generateAIRoadmap, fetchLatestAIAnalysis, fetchDoubtHistory, fetchLatestRoadmap, generateMockOA, fetchLatestMockOA, generateProblems, fetchLatestProblems, calculateReadiness, dsaProgress, updateProgress, addTopic, updateStreak, weeklyActivity, activeTab, totalSolved, leetcodeData, leetcodeLoading, leetcodeError, fetchLeetCodeData, initializing]);
 
   return (
     <AppContext.Provider value={value}>

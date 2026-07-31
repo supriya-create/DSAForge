@@ -1,5 +1,7 @@
-const { TopicProgress, Streak, DailyActivity } = require('../models');
+const { TopicProgress, DailyActivity } = require('../models');
 const { getStoredLeetCodeProfile, syncLeetCodeProfile, AppError } = require('../services/leetcodeService');
+const { getStreakData } = require('../services/streakService');
+const { utcDay, utcDaysAgo, utcDayKey } = require('../services/dateUtils');
 
 const DEFAULT_TOPICS = [
   { topic: 'Arrays', solved: 0, easy: 0, medium: 0, hard: 0, total: 80 },
@@ -14,236 +16,150 @@ const DEFAULT_TOPICS = [
   { topic: 'Recursion', solved: 0, easy: 0, medium: 0, hard: 0, total: 35 },
 ];
 
-// 1. Get Tracker Data (Progress and Streak)
+/**
+ * Clamps an integer to [min, max]. Returns 0 for non-finite input.
+ * Used so malformed/negative payloads can never corrupt stored progress.
+ */
+const clampInt = (value, min, max) => {
+  const n = parseInt(value, 10);
+  if (Number.isNaN(n)) return min;
+  if (max !== Infinity) return Math.min(Math.max(n, min), max);
+  return Math.max(n, min);
+};
+
+const serializeTopic = (t) => ({
+  topic: t.topic,
+  solved: t.solved,
+  easy: t.easy,
+  medium: t.medium,
+  hard: t.hard,
+  total: t.total,
+});
+
+// 1. Get Tracker Data (real TopicProgress + server-computed streak + weekly activity)
 exports.getTrackerData = async (req, res) => {
   try {
     const userId = req.userId;
 
-    // Fetch progress topics
-    let topics = await TopicProgress.find({ user: userId });
+    let topics = await TopicProgress.find({ user: userId }).lean();
 
-    // If no progress records, initialize defaults
     if (!topics || topics.length === 0) {
-      const initialTopics = DEFAULT_TOPICS.map(t => ({
-        ...t,
-        user: userId
-      }));
-      await TopicProgress.insertMany(initialTopics);
-      topics = await TopicProgress.find({ user: userId });
+      await TopicProgress.insertMany(DEFAULT_TOPICS.map((t) => ({ ...t, user: userId })));
+      topics = await TopicProgress.find({ user: userId }).lean();
     }
 
-    // Fetch streak
-    let streakDoc = await Streak.findOne({ user: userId });
-    if (!streakDoc) {
-      streakDoc = await Streak.create({
-        user: userId,
-        currentStreak: 0,
-        bestStreak: 0,
-        lastActiveDate: null
-      });
-    }
+    const { currentStreak } = await getStreakData(userId);
 
-    // Fetch weekly activity (last 7 days)
-    const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const weeklyActivity = [];
-    
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      d.setHours(0, 0, 0, 0);
-      
-      const dayName = daysOfWeek[d.getDay()];
-      const activity = await DailyActivity.findOne({ user: userId, date: d });
-      weeklyActivity.push({
-        day: dayName,
-        solved: activity ? activity.problemsSolvedCount : 0
-      });
-    }
+    const weeklyActivity = await getWeeklyActivityData(userId);
 
     res.status(200).json({
       success: true,
-      dsaProgress: topics.map(t => ({
-        topic: t.topic,
-        solved: t.solved,
-        easy: t.easy,
-        medium: t.medium,
-        hard: t.hard,
-        total: t.total
-      })),
-      streak: streakDoc.currentStreak,
-      weeklyActivity
+      dsaProgress: topics.map(serializeTopic),
+      streak: currentStreak,
+      weeklyActivity,
     });
   } catch (error) {
     res.status(500).json({
       success: false,
       message: 'Server error retrieving tracker data',
-      error: error.message
+      error: error.message,
     });
   }
 };
 
-// 2. Update Topic Progress
+// 2. Update Topic Progress (with validation + correct DailyActivity inc/dec)
 exports.updateTopicProgress = async (req, res) => {
   try {
     const userId = req.userId;
     const topicName = req.params.topic;
-    const { solved, easy, medium, hard, total } = req.body;
 
-    // Get old solved count to compute difference
     const oldTopic = await TopicProgress.findOne({ user: userId, topic: topicName });
     const oldSolved = oldTopic ? oldTopic.solved : 0;
-    const solvedVal = parseInt(solved) || 0;
-    const difference = solvedVal - oldSolved;
+
+    // Validation: clamp into [0, total], total >= 1, solved <= total.
+    const total = clampInt(req.body.total, 1, Infinity);
+    const solved = Math.min(clampInt(req.body.solved, 0, Infinity), total);
+    const easy = Math.min(clampInt(req.body.easy, 0, Infinity), solved);
+    const medium = Math.min(clampInt(req.body.medium, 0, Infinity), solved - easy);
+    const hard = Math.min(clampInt(req.body.hard, 0, Infinity), solved - easy - medium);
+
+    const difference = solved - oldSolved;
 
     const topic = await TopicProgress.findOneAndUpdate(
       { user: userId, topic: topicName },
-      {
-        solved: solvedVal,
-        easy: parseInt(easy) || 0,
-        medium: parseInt(medium) || 0,
-        hard: parseInt(hard) || 0,
-        total: parseInt(total) || 50
-      },
+      { solved, easy, medium, hard, total },
       { new: true, upsert: true }
     );
 
-    // Increment today's DailyActivity count if solved count increased
-    if (difference > 0) {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-
+    // Update today's DailyActivity count for both increments and decrements.
+    if (difference !== 0) {
+      const today = utcDay();
+      const change = {
+        $inc: { problemsSolvedCount: difference },
+      };
+      if (difference > 0) {
+        change.$push = {
+          problemsSolved: {
+            platform: 'Manual',
+            title: `Solved ${difference} problem(s) in ${topicName}`,
+            difficulty: 'Medium',
+          },
+        };
+      }
       await DailyActivity.findOneAndUpdate(
         { user: userId, date: today },
-        {
-          $inc: { problemsSolvedCount: difference },
-          $push: {
-            problemsSolved: {
-              platform: 'Manual',
-              title: `Solved ${difference} problem(s) in ${topicName}`,
-              difficulty: 'Medium'
-            }
-          }
-        },
+        change,
         { upsert: true, new: true }
       );
     }
 
-    res.status(200).json({
-      success: true,
-      topicProgress: {
-        topic: topic.topic,
-        solved: topic.solved,
-        easy: topic.easy,
-        medium: topic.medium,
-        hard: topic.hard,
-        total: topic.total
-      }
-    });
+    res.status(200).json({ success: true, topicProgress: serializeTopic(topic) });
   } catch (error) {
     res.status(500).json({
       success: false,
       message: 'Server error updating topic progress',
-      error: error.message
+      error: error.message,
     });
   }
 };
 
-// 3. Add Topic Progress
+// 3. Add Topic Progress (with validation)
 exports.addTopicProgress = async (req, res) => {
   try {
     const userId = req.userId;
-    const { topic, solved, easy, medium, hard, total } = req.body;
+    const { topic } = req.body;
 
     if (!topic || !topic.trim()) {
-      return res.status(400).json({
-        success: false,
-        message: 'Topic name is required'
-      });
+      return res.status(400).json({ success: false, message: 'Topic name is required' });
     }
 
-    // Check if topic already exists
-    const existing = await TopicProgress.findOne({ user: userId, topic: topic.trim() });
+    const name = topic.trim();
+    const total = clampInt(req.body.total, 1, Infinity);
+    const solved = Math.min(clampInt(req.body.solved, 0, Infinity), total);
+    const easy = Math.min(clampInt(req.body.easy, 0, Infinity), solved);
+    const medium = Math.min(clampInt(req.body.medium, 0, Infinity), solved - easy);
+    const hard = Math.min(clampInt(req.body.hard, 0, Infinity), solved - easy - medium);
+
+    const existing = await TopicProgress.findOne({ user: userId, topic: name });
     if (existing) {
-      return res.status(400).json({
-        success: false,
-        message: 'Topic already exists in your tracker'
-      });
+      return res.status(400).json({ success: false, message: 'Topic already exists in your tracker' });
     }
 
-    const newTopic = await TopicProgress.create({
-      user: userId,
-      topic: topic.trim(),
-      solved: parseInt(solved) || 0,
-      easy: parseInt(easy) || 0,
-      medium: parseInt(medium) || 0,
-      hard: parseInt(hard) || 0,
-      total: parseInt(total) || 50
-    });
+    const newTopic = await TopicProgress.create({ user: userId, topic: name, solved, easy, medium, hard, total });
 
-    res.status(201).json({
-      success: true,
-      topicProgress: {
-        topic: newTopic.topic,
-        solved: newTopic.solved,
-        easy: newTopic.easy,
-        medium: newTopic.medium,
-        hard: newTopic.hard,
-        total: newTopic.total
-      }
-    });
+    res.status(201).json({ success: true, topicProgress: serializeTopic(newTopic) });
   } catch (error) {
     res.status(500).json({
       success: false,
       message: 'Server error adding new topic',
-      error: error.message
+      error: error.message,
     });
   }
 };
 
-// 4. Update Streak
-exports.updateStreak = async (req, res) => {
-  try {
-    const userId = req.userId;
-    const { streak } = req.body;
-
-    const streakVal = parseInt(streak);
-    if (isNaN(streakVal) || streakVal < 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Valid streak value is required'
-      });
-    }
-
-    let streakDoc = await Streak.findOne({ user: userId });
-    if (!streakDoc) {
-      streakDoc = await Streak.create({
-        user: userId,
-        currentStreak: streakVal,
-        bestStreak: streakVal,
-        lastActiveDate: new Date()
-      });
-    } else {
-      streakDoc.currentStreak = streakVal;
-      if (streakVal > streakDoc.bestStreak) {
-        streakDoc.bestStreak = streakVal;
-      }
-      streakDoc.lastActiveDate = new Date();
-      await streakDoc.save();
-    }
-
-    res.status(200).json({
-      success: true,
-      streak: streakDoc.currentStreak,
-      bestStreak: streakDoc.bestStreak
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Server error updating streak',
-      error: error.message
-    });
-  }
-};
+// 4. (Removed) Manual streak update endpoint.
+//    Security/data-integrity: streak is now computed server-side from
+//    DailyActivity. There is no endpoint that lets a client set it.
 
 // 5. Get LeetCode Data
 exports.getLeetCodeData = async (req, res) => {
@@ -251,16 +167,13 @@ exports.getLeetCodeData = async (req, res) => {
     const userId = req.userId;
     const leetcodeData = await getStoredLeetCodeProfile({ userId });
 
-    res.status(200).json({
-      success: true,
-      leetcodeData
-    });
+    res.status(200).json({ success: true, leetcodeData });
   } catch (error) {
     const statusCode = error instanceof AppError ? error.statusCode : 500;
     res.status(statusCode).json({
       success: false,
       message: error.message || 'Server error retrieving LeetCode stats',
-      error: error.details || null
+      error: error.details || null,
     });
   }
 };
@@ -276,47 +189,45 @@ exports.syncLeetCodeData = async (req, res) => {
     res.status(200).json({
       success: true,
       leetcodeData: result.leetcodeData,
-      summary: result.summary
+      summary: result.summary,
     });
   } catch (error) {
     const statusCode = error instanceof AppError ? error.statusCode : 500;
     res.status(statusCode).json({
       success: false,
       message: error.message || 'Server error syncing LeetCode data',
-      error: error.details || null
+      error: error.details || null,
     });
   }
 };
 
-// 7. Get Weekly Activity Data (last 7 days)
+// 7. Weekly Activity (last 7 UTC days) — single batched query, no N+1.
+const getWeeklyActivityData = async (userId) => {
+  const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const dates = Array.from({ length: 7 }, (_, i) => utcDaysAgo(6 - i));
+
+  const activities = await DailyActivity.find({
+    user: userId,
+    date: { $in: dates },
+  }).select('date problemsSolvedCount -_id').lean();
+
+  const byKey = new Map(activities.map((a) => [utcDayKey(a.date), a.problemsSolvedCount || 0]));
+
+  return dates.map((d) => ({
+    day: daysOfWeek[d.getUTCDay()],
+    solved: byKey.get(utcDayKey(d)) || 0,
+  }));
+};
+
 exports.getWeeklyActivity = async (req, res) => {
   try {
-    const userId = req.userId;
-    const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const result = [];
-    
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      d.setHours(0, 0, 0, 0);
-      
-      const dayName = daysOfWeek[d.getDay()];
-      const activity = await DailyActivity.findOne({ user: userId, date: d });
-      result.push({
-        day: dayName,
-        solved: activity ? activity.problemsSolvedCount : 0
-      });
-    }
-
-    res.status(200).json({
-      success: true,
-      activityData: result
-    });
+    const result = await getWeeklyActivityData(req.userId);
+    res.status(200).json({ success: true, activityData: result });
   } catch (error) {
     res.status(500).json({
       success: false,
       message: 'Server error retrieving weekly activity data',
-      error: error.message
+      error: error.message,
     });
   }
 };

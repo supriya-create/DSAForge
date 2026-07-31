@@ -150,7 +150,7 @@ exports.login = async (req, res) => {
     await user.save();
 
     const cachedStats = await LeetcodeStats.findOne({ userId: user._id }).lean();
-    const username = user.leetcodeUsername || user.leetcode || null;
+    const username = user.leetcodeUsername || null;
     const shouldSync = !cachedStats || !cachedStats.lastSynced || (Date.now() - new Date(cachedStats.lastSynced).getTime()) > TWENTY_FOUR_HOURS;
 
     if (shouldSync && username) {
@@ -209,13 +209,16 @@ exports.getCurrentUser = async (req, res) => {
 // Update User Profile
 exports.updateProfile = async (req, res) => {
   try {
-    const { name, leetcode, college, year, phone } = req.body;
+    // Unify on the canonical leetcodeUsername field (was previously split
+    // between `leetcode` and `leetcodeUsername`).
+    const { name, leetcode, leetcodeUsername, college, year, phone } = req.body;
+    const canonicalUsername = leetcodeUsername || leetcode || null;
 
     const user = await User.findByIdAndUpdate(
       req.userId,
       {
         ...(name && { name }),
-        ...(leetcode && { leetcode }),
+        ...(canonicalUsername && { leetcodeUsername: canonicalUsername }),
         ...(college && { college }),
         ...(year && { year }),
         ...(phone && { phone })
@@ -415,7 +418,7 @@ exports.googleLogin = async (req, res) => {
     setAuthCookie(res, generateToken(user._id));
 
     const cachedStats = await LeetcodeStats.findOne({ userId: user._id }).lean();
-    const username = user.leetcodeUsername || user.leetcode || null;
+    const username = user.leetcodeUsername || null;
     const shouldSync = !cachedStats || !cachedStats.lastSynced || (Date.now() - new Date(cachedStats.lastSynced).getTime()) > TWENTY_FOUR_HOURS;
 
     if (shouldSync && username) {

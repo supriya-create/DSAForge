@@ -1,72 +1,26 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 
-const READINESS_PROMPT = (progress) => `Analyze this student's DSA preparation and provide a detailed interview readiness assessment.
-
-Progress data:
-${progress.map(t => `- ${t.topic}: ${t.solved} solved (${Math.round((t.solved/t.total)*100)}% of ${t.total})`).join('\n')}
-
-Respond in EXACTLY this JSON format (no extra text):
-{
-  "overall": 72,
-  "verdict": "Moderate",
-  "message": "One encouraging sentence about their preparation",
-  "topics": {
-    "Arrays": 85,
-    "Strings": 80,
-    "Linked Lists": 65,
-    "Trees": 55,
-    "Graphs": 30,
-    "Dynamic Programming": 35
-  },
-  "strengths": ["strength 1", "strength 2", "strength 3"],
-  "gaps": ["gap 1", "gap 2", "gap 3"],
-  "estimate": "2-3 months",
-  "next_steps": ["step 1", "step 2", "step 3"]
-}
-
-Use the actual data to calculate realistic scores. Overall should be weighted average.`;
-
 const ReadinessScore = () => {
-  const { dsaProgress, leetcodeData } = useApp();
+  const { leetcodeData, calculateReadiness } = useApp();
   const [score, setScore] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const calcScore = async () => {
     setLoading(true);
     setScore(null);
+    setError('');
     try {
-      await new Promise(r => setTimeout(r, 1500));
-      const mockScore = Math.round((dsaProgress.reduce((s, t) => s + (t.solved / t.total), 0) / dsaProgress.length * 100) * 0.8);
-      const mockResponse = { ok: true, json: async () => ({ content: [{ text: `Overall Readiness Score: ${mockScore}%
-
-Your preparation level indicates you are ${mockScore >= 70 ? 'well-prepared' : 'moderately prepared'} for placements. Focus on weak areas to boost confidence.` }] }) };
-      const response = mockResponse;
-      const data = await response.json();
-      const text = data.content?.map(c => c.text || '').join('') || '{}';
-      const clean = text.replace(/```json|```/g, '').trim();
-      setScore(JSON.parse(clean));
+      // Real server-side readiness assessment (no mocked data).
+      const data = await calculateReadiness();
+      setScore(data);
     } catch (err) {
-      const overall = Math.round(dsaProgress.reduce((s, t) => s + (t.solved / t.total), 0) / dsaProgress.length * 100);
-      setScore({ 
-        overall, 
-        verdict: overall >= 70 ? 'Ready' : overall >= 50 ? 'Moderate' : 'Needs Work', 
-        message: 'Keep practicing consistently to improve your placement chances and scores.', 
-        topics: {
-          "Arrays & Hashing": Math.round(overall * 1.1) > 100 ? 100 : Math.round(overall * 1.1),
-          "Two Pointers & Slid. Window": Math.round(overall * 0.95),
-          "Stacks & Queues": Math.round(overall * 0.9),
-          "Linked Lists": Math.round(overall * 0.8),
-          "Trees & Graphs": Math.round(overall * 0.6),
-          "Dynamic Programming": Math.round(overall * 0.45)
-        }, 
-        strengths: ['Solid foundation in core arrays', 'Consistent revision schedules', 'Great daily streak maintenance'], 
-        gaps: ['Performance under timed assessments', 'Advanced graph algorithms traversal', 'Dynamic programming memoization'], 
-        estimate: '3-4 months', 
-        next_steps: ['Solve 3 medium difficulty dynamic programming problems', 'Attempt a timed 90-minute Mock Assessment', 'Review previous graph search failures'] 
-      });
+      console.error(err);
+      setError(err.message || 'Unable to calculate readiness score. Please try again.');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const getVerdictColor = (v) => {
@@ -112,6 +66,14 @@ Your preparation level indicates you are ${mockScore >= 70 ? 'well-prepared' : '
                 ) : '🏆 Calculate Score'}
               </button>
             </div>
+            {error && !loading && (
+              <div className="mt-16" style={{
+                background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.2)',
+                color: 'var(--accent-pink)', padding: '12px 14px', borderRadius: '10px', fontSize: '13px'
+              }}>
+                ⚠️ {error}
+              </div>
+            )}
           </div>
 
           {!score && !loading && (

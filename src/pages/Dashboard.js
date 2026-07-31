@@ -13,7 +13,7 @@ const Dashboard = () => {
     name: user?.name || '',
     college: user?.college || '',
     year: user?.year || '1st Year',
-    leetcode: user?.leetcode || user?.leetcodeUsername || ''
+    leetcodeUsername: user?.leetcodeUsername || user?.leetcode || ''
   });
   const [editError, setEditError] = useState('');
   const [editSaving, setEditSaving] = useState(false);
@@ -23,7 +23,7 @@ const Dashboard = () => {
       name: user?.name || '',
       college: user?.college || '',
       year: user?.year || '1st Year',
-      leetcode: user?.leetcode || user?.leetcodeUsername || ''
+      leetcodeUsername: user?.leetcodeUsername || user?.leetcode || ''
     });
     setEditError('');
     setIsEditingProfile(true);
@@ -427,8 +427,8 @@ const Dashboard = () => {
                   type="text"
                   placeholder="e.g. aryan_codes"
                   className="input-field"
-                  value={profileForm.leetcode}
-                  onChange={e => setProfileForm({ ...profileForm, leetcode: e.target.value })}
+                  value={profileForm.leetcodeUsername}
+                  onChange={e => setProfileForm({ ...profileForm, leetcodeUsername: e.target.value })}
                 />
               </div>
 

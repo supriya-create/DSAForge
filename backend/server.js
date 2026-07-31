@@ -9,6 +9,7 @@ const authRoutes = require('./routes/authRoutes');
 const aiRoutes = require('./routes/aiRoutes');
 const trackerRoutes = require('./routes/trackerRoutes');
 const leetcodeRoutes = require('./routes/leetcodeRoutes');
+const readinessRoutes = require('./routes/readinessRoutes');
 
 const app = express();
 const PORT = config.port;
@@ -70,6 +71,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/tracker', trackerRoutes);
 app.use('/api/leetcode', leetcodeRoutes);
+app.use('/api/readiness', readinessRoutes);
 
 // Serve frontend build if it exists (so backend can host both frontend + API)
 const buildPath = path.join(__dirname, '..', 'build');

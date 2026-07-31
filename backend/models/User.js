@@ -27,6 +27,8 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: null
     },
+    // LEGACY FIELD: kept only for backward compatibility with old documents.
+    // The canonical field is `leetcodeUsername`. Use that in all new code.
     leetcode: {
       type: String,
       default: null
