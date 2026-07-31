@@ -1,9 +1,10 @@
 const dotenv = require('dotenv');
+const path = require('path');
 const connectDB = require('../config/db');
 const {
   User,
   Progress,
-  LeetCodeStat,
+  LeetcodeStats,
   DailyActivity,
   Streak,
   Roadmap,
@@ -13,7 +14,7 @@ const {
   AIAnalysis
 } = require('../models');
 
-dotenv.config({ path: '../.env' });
+dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
 (async () => {
   try {
@@ -48,18 +49,20 @@ dotenv.config({ path: '../.env' });
       { upsert: true, new: true }
     );
 
-    await LeetCodeStat.findOneAndUpdate(
-      { user: user._id },
+    await LeetcodeStats.findOneAndUpdate(
+      { userId: user._id },
       {
-        user: user._id,
+        userId: user._id,
+        username: 'seed_user',
         totalSolved: 5,
         easySolved: 3,
         mediumSolved: 2,
         hardSolved: 0,
         acceptanceRate: 85,
         ranking: 1200,
-        lastSyncedAt: new Date(),
-        rawProfile: { profile: 'seed' }
+        lastSynced: new Date(),
+        contestHistory: [],
+        recentSubmissions: []
       },
       { upsert: true, new: true }
     );

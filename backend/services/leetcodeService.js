@@ -305,30 +305,57 @@ const syncLeetCodeProfile = async ({ userId, username, fetchImpl = fetch }) => {
     }
   }
 
-  for (const [key, items] of dayBuckets) {
-    const date = utcDay(new Date(`${key}T00:00:00Z`));
-    const activity = await DailyActivity.findOne({ user: userId, date });
+  // Batch persist DailyActivity: one read + one bulkWrite instead of N queries.
+  if (dayBuckets.size > 0) {
+    const dayDates = [...dayBuckets.keys()].map((key) => utcDay(new Date(`${key}T00:00:00Z`)));
+    const existing = await DailyActivity.find({
+      user: userId,
+      date: { $in: dayDates },
+    }).select('date problemsSolved -_id').lean();
 
-    if (activity) {
-      // Merge: only push problems not already recorded for that day.
-      const existingIds = new Set(activity.problemsSolved.map((p) => p.problemId).filter(Boolean));
-      const toAdd = items.filter((i) => !existingIds.has(i.problemId));
-      if (toAdd.length) {
-        await DailyActivity.updateOne(
-          { _id: activity._id },
-          {
-            $inc: { problemsSolvedCount: toAdd.length },
-            $push: { problemsSolved: { $each: toAdd.map((i) => ({ problemId: i.problemId, platform: 'LeetCode', title: i.title, difficulty: i.difficulty })) } },
-          }
-        );
+    const existingByKey = new Map(existing.map((a) => [utcDayKey(a.date), a]));
+
+    const ops = [];
+    for (const [key, items] of dayBuckets) {
+      const date = utcDay(new Date(`${key}T00:00:00Z`));
+      const current = existingByKey.get(key);
+      const mapped = items.map((i) => ({ problemId: i.problemId, platform: 'LeetCode', title: i.title, difficulty: i.difficulty }));
+
+      if (current) {
+        // Merge: only push problems not already recorded for that day.
+        const existingIds = new Set((current.problemsSolved || []).map((p) => p.problemId).filter(Boolean));
+        const toAdd = mapped.filter((i) => !existingIds.has(i.problemId));
+        if (toAdd.length) {
+          ops.push({
+            updateOne: {
+              filter: { user: userId, date },
+              update: {
+                $inc: { problemsSolvedCount: toAdd.length },
+                $push: { problemsSolved: { $each: toAdd } },
+              },
+            },
+          });
+        }
+      } else {
+        ops.push({
+          updateOne: {
+            filter: { user: userId, date },
+            update: {
+              $setOnInsert: {
+                user: userId,
+                date,
+                problemsSolvedCount: mapped.length,
+                problemsSolved: mapped,
+              },
+            },
+            upsert: true,
+          },
+        });
       }
-    } else {
-      await DailyActivity.create({
-        user: userId,
-        date,
-        problemsSolvedCount: items.length,
-        problemsSolved: items.map((i) => ({ problemId: i.problemId, platform: 'LeetCode', title: i.title, difficulty: i.difficulty })),
-      });
+    }
+
+    if (ops.length > 0) {
+      await DailyActivity.bulkWrite(ops, { ordered: false });
     }
   }
 
