@@ -34,7 +34,6 @@ export const AppProvider = ({ children }) => {
     { day: 'Sat', solved: 0 },
     { day: 'Sun', solved: 0 }
   ]);
-  const [activeTab, setActiveTab] = useState('dashboard');
   const [leetcodeData, setLeetCodeData] = useState(null);
   const [leetcodeLoading, setLeetCodeLoading] = useState(false);
   const [leetcodeError, setLeetCodeError] = useState(null);
@@ -90,7 +89,6 @@ export const AppProvider = ({ children }) => {
       { day: 'Sun', solved: 0 }
     ]);
     setLeetCodeData(null);
-    setActiveTab('dashboard');
   };
 
   const login = useCallback((userData, leetcodeDataFromAuth = null) => {
@@ -379,11 +377,10 @@ export const AppProvider = ({ children }) => {
     dsaProgress, updateProgress, addTopic,
     streak, setStreak: updateStreak,
     weeklyActivity,
-    activeTab, setActiveTab,
     totalSolved,
     leetcodeData, leetcodeLoading, leetcodeError, fetchLeetCodeData,
     initializing,
-  }), [user, isLoggedIn, login, logout, registerUser, loginUser, loginWithGoogle, updateProfile, runAIAnalysis, solveAIDoubt, generateAIRoadmap, fetchLatestAIAnalysis, fetchDoubtHistory, fetchLatestRoadmap, generateMockOA, fetchLatestMockOA, generateProblems, fetchLatestProblems, calculateReadiness, dsaProgress, updateProgress, addTopic, updateStreak, weeklyActivity, activeTab, totalSolved, leetcodeData, leetcodeLoading, leetcodeError, fetchLeetCodeData, initializing]);
+  }), [user, isLoggedIn, login, logout, registerUser, loginUser, loginWithGoogle, updateProfile, runAIAnalysis, solveAIDoubt, generateAIRoadmap, fetchLatestAIAnalysis, fetchDoubtHistory, fetchLatestRoadmap, generateMockOA, fetchLatestMockOA, generateProblems, fetchLatestProblems, calculateReadiness, dsaProgress, updateProgress, addTopic, updateStreak, weeklyActivity, totalSolved, leetcodeData, leetcodeLoading, leetcodeError, fetchLeetCodeData, initializing]);
 
   return (
     <AppContext.Provider value={value}>
