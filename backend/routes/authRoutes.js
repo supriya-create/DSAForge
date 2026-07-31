@@ -2,6 +2,7 @@ const express = require('express');
 const { body } = require('express-validator');
 const authController = require('../controllers/authController');
 const { authenticate } = require('../middleware/auth');
+const { loginLimiter, registerLimiter, googleLimiter } = require('../middleware/rateLimit');
 
 const router = express.Router();
 
@@ -32,15 +33,15 @@ const validateLogin = [
     .withMessage('Password is required')
 ];
 
-// Public routes
-router.post('/register', validateRegister, authController.register);
-router.post('/login', validateLogin, authController.login);
-router.post('/google', authController.googleLogin);
+// Public routes — rate-limited to prevent brute-force and mass-signup abuse.
+router.post('/register', registerLimiter, validateRegister, authController.register);
+router.post('/login', loginLimiter, validateLogin, authController.login);
+router.post('/google', googleLimiter, authController.googleLogin);
 
 // Protected routes
 router.get('/me', authenticate, authController.getCurrentUser);
 router.put('/profile', authenticate, authController.updateProfile);
-router.post('/change-password', authenticate, authController.changePassword);
+router.post('/change-password', loginLimiter, authenticate, authController.changePassword);
 router.post('/verify-token', authenticate, authController.verifyToken);
 router.post('/logout', authenticate, authController.logout);
 

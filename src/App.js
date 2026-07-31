@@ -13,8 +13,14 @@ import DoubtSolver from './pages/DoubtSolver';
 import './styles/global.css';
 
 const MainApp = () => {
-  const { isLoggedIn, activeTab } = useApp();
+  const { isLoggedIn, activeTab, initializing } = useApp();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // While the session is being resolved from the httpOnly cookie, render
+  // nothing (prevents a flash of the auth screen for logged-in users).
+  if (initializing) {
+    return <div className="auth-loading" />;
+  }
 
   if (!isLoggedIn) return <AuthPage />;
 

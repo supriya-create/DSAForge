@@ -1,4 +1,17 @@
+# Dependencies
 node_modules/
-.DS_Store
+
+# Builds
+build/
+dist/
+coverage/
+
+# Environment & secrets — never commit
 .env
+.env.*
+!.env.example
+
+# OS / editor
+.DS_Store
 npm-debug.log*
+*.log
