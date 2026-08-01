@@ -27,7 +27,7 @@ const Sidebar = ({ isOpen, onClose }) => {
             display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px',
             boxShadow: 'var(--glow-cyan)', color: '#06050c', fontWeight: 800
           }}>⚡</div>
-          <span style={{ fontFamily: 'var(--font-display)', fontSize: '20px', fontWeight: 800, letterSpacing: '-0.5px' }}>
+          <span style={{ fontFamily: 'var(--font-display)', fontSize: '20px', fontWeight: 800, letterSpacing: '-0.3px' }}>
             DSA<span className="gradient-text-cyan">Forge</span>
           </span>
         </div>

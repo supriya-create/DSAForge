@@ -120,7 +120,7 @@ const ReadinessScore = () => {
                   />
                 </svg>
                 <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                  <div style={{ fontFamily: 'var(--font-display)', fontSize: '38px', fontWeight: 800, color: getScoreColor(score.overall), letterSpacing: '-1px' }}>{score.overall}</div>
+                  <div style={{ fontFamily: 'var(--font-display)', fontSize: '38px', fontWeight: 800, color: getScoreColor(score.overall), letterSpacing: '-0.5px' }}>{score.overall}</div>
                   <div style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.5px' }}>readiness</div>
                 </div>
               </div>
