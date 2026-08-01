@@ -2,38 +2,26 @@ const { DailyActivity } = require('../models');
 const { utcDayKey, utcToday, addUtcDays } = require('./dateUtils');
 
 /**
- * Server-side, deterministic streak computation from the DailyActivity
- * collection. A "streak day" is any UTC day with problemsSolvedCount > 0.
- * The current streak must end today or yesterday (otherwise it has lapsed).
- *
- * Architectural change: the streak is now always derived from DailyActivity
- * on the server. The insecure client endpoint that let users set their own
- * streak has been removed, so the value cannot be forged.
- *
- * @returns {Promise<number>} current streak
+ * Pure helpers for streak math. Kept free of DB/IO so they can be unit-tested
+ * in isolation. All day values are YYYY-MM-DD strings in UTC.
  */
-const computeStreak = async (userId) => {
-  const activities = await DailyActivity.find({
-    user: userId,
-    problemsSolvedCount: { $gt: 0 },
-  }).select('date -_id').lean();
 
-  // Unique UTC day keys, ascending.
-  const days = [...new Set(activities.map((a) => utcDayKey(a.date)))].sort();
+const sortedKeys = (keys) => [...new Set(keys)].sort();
 
-  if (days.length === 0) return 0;
+/**
+ * Current streak: consecutive days (ending today or yesterday) with activity.
+ */
+const computeStreakFromDayKeys = (dayKeys, todayKey, yesterdayKey) => {
+  const sorted = sortedKeys(dayKeys);
+  if (sorted.length === 0) return 0;
 
-  const todayKey = utcDayKey(utcToday());
-  const yesterdayKey = utcDayKey(addUtcDays(utcToday(), -1));
-  const lastDay = days[days.length - 1];
-
-  // Streak lapsed unless the most recent activity is today or yesterday.
+  const lastDay = sorted[sorted.length - 1];
+  // A streak lapses unless the most recent activity is today or yesterday.
   if (lastDay !== todayKey && lastDay !== yesterdayKey) return 0;
 
-  // Count consecutive days backwards from the last active day.
   let streak = 1;
+  const set = new Set(sorted);
   let cursor = addUtcDays(new Date(`${lastDay}T00:00:00Z`), -1);
-  const set = new Set(days);
   while (set.has(utcDayKey(cursor))) {
     streak += 1;
     cursor = addUtcDays(cursor, -1);
@@ -41,37 +29,52 @@ const computeStreak = async (userId) => {
   return streak;
 };
 
-/**
- * Returns the user's current and best streak.
- * Best streak is scanned across all activity days (contiguous runs).
- */
-const getStreakData = async (userId) => {
-  const currentStreak = await computeStreak(userId);
+/** Longest contiguous run of activity days. */
+const computeBestStreakFromDayKeys = (dayKeys) => {
+  const sorted = sortedKeys(dayKeys);
+  if (sorted.length === 0) return 0;
 
+  let best = 0;
+  let run = 1;
+  const set = new Set(sorted);
+  for (let i = 1; i < sorted.length; i += 1) {
+    const prev = new Date(`${sorted[i - 1]}T00:00:00Z`);
+    const cur = new Date(`${sorted[i]}T00:00:00Z`);
+    if (utcDayKey(addUtcDays(prev, 1)) === utcDayKey(cur)) {
+      run += 1;
+    } else {
+      best = Math.max(best, run);
+      run = 1;
+    }
+  }
+  return Math.max(best, run);
+};
+
+// ---- DB-backed wrappers ----
+
+const activityDayKeys = async (userId) => {
   const activities = await DailyActivity.find({
     user: userId,
     problemsSolvedCount: { $gt: 0 },
   }).select('date -_id').lean();
+  return activities.map((a) => utcDayKey(a.date));
+};
 
-  const days = [...new Set(activities.map((a) => utcDayKey(a.date)))].sort();
-  let bestStreak = 0;
-  if (days.length > 0) {
-    let run = 1;
-    const set = new Set(days);
-    for (let i = 1; i < days.length; i += 1) {
-      const prev = new Date(`${days[i - 1]}T00:00:00Z`);
-      const cur = new Date(`${days[i]}T00:00:00Z`);
-      if (utcDayKey(addUtcDays(prev, 1)) === utcDayKey(cur)) {
-        run += 1;
-      } else {
-        bestStreak = Math.max(bestStreak, run);
-        run = 1;
-      }
-    }
-    bestStreak = Math.max(bestStreak, run);
-  }
+const computeStreak = async (userId) => {
+  const keys = await activityDayKeys(userId);
+  return computeStreakFromDayKeys(keys, utcDayKey(utcToday()), utcDayKey(addUtcDays(utcToday(), -1)));
+};
 
+const getStreakData = async (userId) => {
+  const keys = await activityDayKeys(userId);
+  const currentStreak = computeStreakFromDayKeys(keys, utcDayKey(utcToday()), utcDayKey(addUtcDays(utcToday(), -1)));
+  const bestStreak = computeBestStreakFromDayKeys(keys);
   return { currentStreak, bestStreak };
 };
 
-module.exports = { computeStreak, getStreakData };
+module.exports = {
+  computeStreak,
+  getStreakData,
+  computeStreakFromDayKeys,
+  computeBestStreakFromDayKeys,
+};

@@ -294,6 +294,15 @@ export const AppProvider = ({ children }) => {
     }
   }, [request]);
 
+  const deleteTopic = useCallback(async (topic) => {
+    setDsaProgress(prev => prev.filter(item => item.topic !== topic));
+    try {
+      await request(`/api/tracker/progress/${encodeURIComponent(topic)}`, { method: 'DELETE' });
+    } catch (err) {
+      console.error('Error deleting topic:', err.message);
+    }
+  }, [request]);
+
   const updateStreak = useCallback(async () => {
     // Streak is computed server-side from DailyActivity. There is intentionally
     // no client-endpoint to set it, so it cannot be forged.
@@ -379,13 +388,13 @@ export const AppProvider = ({ children }) => {
     fetchLatestAIAnalysis, fetchDoubtHistory, fetchLatestRoadmap,
     generateMockOA, fetchLatestMockOA, generateProblems, fetchLatestProblems,
     calculateReadiness,
-    dsaProgress, updateProgress, addTopic,
+    dsaProgress, updateProgress, addTopic, deleteTopic,
     streak, setStreak: updateStreak,
     weeklyActivity,
     totalSolved,
     leetcodeData, leetcodeLoading, leetcodeError, fetchLeetCodeData,
     initializing,
-  }), [user, isLoggedIn, login, logout, registerUser, loginUser, loginWithGoogle, updateProfile, runAIAnalysis, solveAIDoubt, generateAIRoadmap, fetchLatestAIAnalysis, fetchDoubtHistory, fetchLatestRoadmap, generateMockOA, fetchLatestMockOA, generateProblems, fetchLatestProblems, calculateReadiness, dsaProgress, updateProgress, addTopic, updateStreak, weeklyActivity, totalSolved, leetcodeData, leetcodeLoading, leetcodeError, fetchLeetCodeData, initializing]);
+  }), [user, isLoggedIn, login, logout, registerUser, loginUser, loginWithGoogle, updateProfile, runAIAnalysis, solveAIDoubt, generateAIRoadmap, fetchLatestAIAnalysis, fetchDoubtHistory, fetchLatestRoadmap, generateMockOA, fetchLatestMockOA, generateProblems, fetchLatestProblems, calculateReadiness, dsaProgress, updateProgress, addTopic, deleteTopic, updateStreak, weeklyActivity, totalSolved, leetcodeData, leetcodeLoading, leetcodeError, fetchLeetCodeData, initializing]);
 
   return (
     <AppContext.Provider value={value}>

@@ -161,6 +161,25 @@ exports.addTopicProgress = async (req, res) => {
 //    Security/data-integrity: streak is now computed server-side from
 //    DailyActivity. There is no endpoint that lets a client set it.
 
+// 4b. Delete a topic from the tracker
+exports.deleteTopicProgress = async (req, res) => {
+  try {
+    const userId = req.userId;
+    const topicName = req.params.topic;
+    const result = await TopicProgress.deleteOne({ user: userId, topic: topicName });
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ success: false, message: 'Topic not found' });
+    }
+    res.status(200).json({ success: true, message: 'Topic deleted' });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Server error deleting topic',
+      error: error.message,
+    });
+  }
+};
+
 // 5. Get LeetCode Data
 exports.getLeetCodeData = async (req, res) => {
   try {

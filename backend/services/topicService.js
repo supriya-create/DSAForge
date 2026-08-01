@@ -73,6 +73,34 @@ const fetchProblemMeta = async (slug) => {
   return result;
 };
 
+/**
+ * Pure per-topic aggregation from submissions + their fetched metadata.
+ * @param {Array} submissions  [{ problemId }]
+ * @param {Map} slugToMeta  slug -> { difficulty, topics: string[] }
+ * @param {Object} aliases  topic tag -> canonical topic name
+ * @returns {Map<string,{solved,easy,medium,hard}>}
+ */
+const aggregateTopicCounts = (submissions, slugToMeta, aliases = TOPIC_ALIASES) => {
+  const agg = new Map();
+  const bump = (topic, difficulty) => {
+    if (!agg.has(topic)) agg.set(topic, { solved: 0, easy: 0, medium: 0, hard: 0 });
+    const entry = agg.get(topic);
+    entry.solved += 1;
+    if (difficulty === 'Easy') entry.easy += 1;
+    else if (difficulty === 'Medium') entry.medium += 1;
+    else if (difficulty === 'Hard') entry.hard += 1;
+  };
+
+  for (const sub of submissions) {
+    const meta = slugToMeta.get(sub.problemId);
+    if (!meta || !meta.topics.length) continue;
+    for (const tag of meta.topics) {
+      bump(aliases[tag] || tag, meta.difficulty);
+    }
+  }
+  return agg;
+};
+
 /** Runs fns over items with a concurrency cap. */
 async function mapWithConcurrency(items, limit, fn) {
   const results = new Array(items.length);
@@ -115,23 +143,7 @@ const deriveTopicProgress = async (userId) => {
   });
 
   // Aggregate per-topic solved + difficulty counts from the submission set.
-  const agg = new Map(); // topic -> { solved, easy, medium, hard }
-  const bump = (topic, difficulty) => {
-    if (!agg.has(topic)) agg.set(topic, { solved: 0, easy: 0, medium: 0, hard: 0 });
-    const entry = agg.get(topic);
-    entry.solved += 1;
-    if (difficulty === 'Easy') entry.easy += 1;
-    else if (difficulty === 'Medium') entry.medium += 1;
-    else if (difficulty === 'Hard') entry.hard += 1;
-  };
-
-  for (const sub of submissions) {
-    const meta = slugMeta.get(sub.problemId);
-    if (!meta || !meta.topics.length) continue;
-    for (const tag of meta.topics) {
-      bump(TOPIC_ALIASES[tag] || tag, meta.difficulty);
-    }
-  }
+  const agg = aggregateTopicCounts(submissions, slugMeta, TOPIC_ALIASES);
 
   let updated = 0;
   for (const [topic, counts] of agg) {
@@ -162,4 +174,4 @@ const deriveTopicProgress = async (userId) => {
   return { updated, topics: [...agg.keys()] };
 };
 
-module.exports = { deriveTopicProgress, fetchProblemMeta };
+module.exports = { deriveTopicProgress, fetchProblemMeta, aggregateTopicCounts };

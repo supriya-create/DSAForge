@@ -1,12 +1,26 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
+import { useToast } from '../components/ui';
 
 const DSATracker = () => {
-  const { dsaProgress, updateProgress, addTopic } = useApp();
+  const { dsaProgress, updateProgress, addTopic, deleteTopic } = useApp();
+  const { toast } = useToast();
   const [editingTopic, setEditingTopic] = useState(null);
   const [editVals, setEditVals] = useState({});
   const [showAdd, setShowAdd] = useState(false);
   const [newTopic, setNewTopic] = useState({ topic: '', solved: 0, easy: 0, medium: 0, hard: 0, total: 50 });
+  const [search, setSearch] = useState('');
+  const [confirmDelete, setConfirmDelete] = useState(null);
+
+  const handleDelete = async (topic) => {
+    await deleteTopic(topic);
+    toast({ type: 'success', title: 'Topic deleted', message: topic });
+    setConfirmDelete(null);
+  };
+
+  const visibleTopics = dsaProgress.filter(t =>
+    t.topic.toLowerCase().includes(search.trim().toLowerCase())
+  );
 
   const startEdit = (t) => {
     setEditingTopic(t.topic);
@@ -32,10 +46,26 @@ const DSATracker = () => {
           <h1 className="section-title">DSA Progress Tracker</h1>
           <p className="section-subtitle">Track your problem-solving progress across all DSA topics</p>
         </div>
-        <button className="btn-primary" onClick={() => setShowAdd(!showAdd)}>
-          + Add Topic
-        </button>
+        <div className="flex-align-center flex-wrap" style={{ gap: '12px' }}>
+          <input
+            className="input-field"
+            type="search"
+            placeholder="Search topics…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            style={{ width: '200px' }}
+          />
+          <button className="btn-primary" onClick={() => setShowAdd(!showAdd)}>
+            + Add Topic
+          </button>
+        </div>
       </div>
+
+      {visibleTopics.length === 0 && dsaProgress.length > 0 && (
+        <div className="mb-24" style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
+          No topics match “{search}”.
+        </div>
+      )}
 
       {/* Add Topic Form */}
       {showAdd && (
@@ -77,7 +107,7 @@ const DSATracker = () => {
 
       {/* Topic Cards Grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '20px' }}>
-        {dsaProgress.map((t) => {
+        {visibleTopics.map((t) => {
           const pct = Math.round((t.solved / t.total) * 100);
           const level = pct >= 70 ? 'strong' : pct >= 40 ? 'moderate' : 'weak';
           const isEditing = editingTopic === t.topic;
