@@ -1,5 +1,6 @@
 const { User, LeetcodeStats, Streak, DailyActivity } = require('../models');
 const { getStreakData } = require('./streakService');
+const { deriveTopicProgress } = require('./topicService');
 const { utcDay, utcDayKey } = require('./dateUtils');
 
 const LEETCODE_GRAPHQL_URL = 'https://leetcode.com/graphql';
@@ -398,6 +399,10 @@ const syncLeetCodeProfile = async ({ userId, username, fetchImpl = fetch }) => {
     user.leetcodeUsername = leetcodeUsername;
     await user.save();
   }
+
+  // Derive per-topic progress from the accepted submissions and persist it to
+  // TopicProgress, so the tracker/radar/strengths reflect real solved problems.
+  await deriveTopicProgress(userId);
 
   return {
     leetcodeData: {
