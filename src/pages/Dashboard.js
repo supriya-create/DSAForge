@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { RadarChart, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'recharts';
 import { useApp } from '../context/AppContext';
+import { EmptyState, Button } from '../components/ui';
 import ContestHistory from '../components/ContestHistory';
 import RecentSubmissions from '../components/RecentSubmissions';
 import SubmissionHeatmap from '../components/SubmissionHeatmap';
@@ -65,10 +66,18 @@ const Dashboard = () => {
   );
 
   // Radar chart shows ALL topics with full names (no truncation to first word).
-  const radarData = dsaProgress.map(t => ({
+  // Radar shows only topics with real activity (no flat empty polygon).
+  const radarData = dsaProgress.filter(t => t.solved > 0).map(t => ({
     topic: t.topic,
     score: Math.round((t.solved / t.total) * 100)
   }));
+
+  // Overall weighted completion + difficulty distribution.
+  const overallPct = dsaProgress.length
+    ? Math.round(dsaProgress.reduce((s, t) => s + (t.total ? t.solved / t.total : 0), 0) / dsaProgress.length * 100)
+    : 0;
+  const diffTotal = easySolved + mediumSolved + hardSolved;
+  const diffPct = (n) => (diffTotal > 0 ? Math.round((n / diffTotal) * 100) : 0);
 
   const topStrong = [...dsaProgress].sort((a, b) => (b.solved / b.total) - (a.solved / a.total)).slice(0, 3);
   const topWeak = [...dsaProgress].sort((a, b) => (a.solved / a.total) - (b.solved / b.total)).slice(0, 3);
@@ -143,6 +152,34 @@ const Dashboard = () => {
         </div>
       </div>
 
+      {/* Overall Progress hero */}
+      <div className="card mb-24" style={{ padding: '22px' }}>
+        <div className="flex-row-between flex-wrap gap-16" style={{ alignItems: 'center' }}>
+          <div>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: '15px', fontWeight: 800, marginBottom: '4px' }}>Overall Progress</div>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Weighted completion across all topics</div>
+          </div>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: '40px', fontWeight: 800, color: 'var(--accent-cyan)', lineHeight: 1 }}>{overallPct}%</div>
+        </div>
+        <div className="progress-bar" style={{ marginTop: '16px' }}>
+          <div className="progress-fill" style={{ width: `${overallPct}%`, background: 'linear-gradient(90deg, var(--accent-cyan), var(--accent-purple))' }} />
+        </div>
+        {diffTotal > 0 && (
+          <>
+            <div style={{ display: 'flex', marginTop: '18px', borderRadius: '8px', overflow: 'hidden', height: '10px' }}>
+              <div style={{ width: `${diffPct(easySolved)}%`, background: 'var(--accent-green)' }} title={`${easySolved} easy`} />
+              <div style={{ width: `${diffPct(mediumSolved)}%`, background: 'var(--accent-orange)' }} title={`${mediumSolved} medium`} />
+              <div style={{ width: `${diffPct(hardSolved)}%`, background: 'var(--accent-pink)' }} title={`${hardSolved} hard`} />
+            </div>
+            <div className="flex-row-between flex-wrap gap-8" style={{ marginTop: '10px', fontSize: '12.5px', color: 'var(--text-secondary)' }}>
+              <span>🟢 {easySolved} easy</span>
+              <span>🟠 {mediumSolved} medium</span>
+              <span>🔴 {hardSolved} hard</span>
+            </div>
+          </>
+        )}
+      </div>
+
       {/* LeetCode Stats */}
       <div className="card mb-24" style={{ padding: '24px' }}>
         <div className="flex-row-between mb-16 flex-wrap gap-12">
@@ -207,13 +244,19 @@ const Dashboard = () => {
             <div className="card">
               <div style={{ fontFamily: 'var(--font-display)', fontSize: '17px', fontWeight: 800, marginBottom: '4px' }}>Topic Mastery</div>
               <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>Performance across DSA domains</div>
-              <ResponsiveContainer width="100%" height={300}>
-                <RadarChart data={radarData} outerRadius="72%">
-                  <PolarGrid stroke="rgba(255,255,255,0.04)" />
-                  <PolarAngleAxis dataKey="topic" tick={{ fill: '#9CA3AF', fontSize: 10, fontWeight: 500 }} />
-                  <Radar name="Score" dataKey="score" stroke="#00D4FF" fill="#00D4FF" fillOpacity={0.12} strokeWidth={2.5} />
-                </RadarChart>
-              </ResponsiveContainer>
+              {radarData.length ? (
+                <ResponsiveContainer width="100%" height={300}>
+                  <RadarChart data={radarData} outerRadius="72%">
+                    <PolarGrid stroke="rgba(255,255,255,0.04)" />
+                    <PolarAngleAxis dataKey="topic" tick={{ fill: '#9CA3AF', fontSize: 10, fontWeight: 500 }} />
+                    <Radar name="Score" dataKey="score" stroke="#00D4FF" fill="#00D4FF" fillOpacity={0.12} strokeWidth={2.5} />
+                  </RadarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div style={{ padding: '60px 20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13.5px' }}>
+                  No topic progress yet — add topics in the DSA Tracker to see your mastery radar.
+                </div>
+              )}
             </div>
 
             {/* Activity Chart */}
@@ -294,15 +337,12 @@ const Dashboard = () => {
           </div>
         </>
       ) : (
-        <div className="card mb-24 text-center" style={{ padding: '40px 24px', border: '1px dashed var(--border-bright)' }}>
-          <span style={{ fontSize: '32px', display: 'block', marginBottom: '12px' }}>📊</span>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: '18px', fontWeight: 800, marginBottom: '6px' }}>
-            Sync LeetCode ID to View Progress Analysis & Charts
-          </div>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '14px', maxWidth: '480px', margin: '0 auto' }}>
-            Please sync your LeetCode profile to unlock Topic Mastery charts, Weekly Activity tracking, Submission Heatmap, and Strengths/Focus areas.
-          </p>
-        </div>
+        <EmptyState
+          icon="📊"
+          title="Sync LeetCode ID to View Progress Analysis & Charts"
+          subtitle="Add your LeetCode username to unlock Topic Mastery charts, Weekly Activity tracking, Submission Heatmap, and Strengths/Focus areas."
+          action={<Button onClick={handleOpenEdit}>Add your LeetCode username</Button>}
+        />
       )}
 
       {/* Topic Progress Table */}

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
+import LeetCodeEmptyState from '../components/LeetCodeEmptyState';
 
 const isStructuredAnalysis = (analysis) => {
   return analysis && typeof analysis === 'object' && !Array.isArray(analysis) && ('weakestTopics' in analysis || 'difficultyAnalysis' in analysis);
@@ -245,15 +246,11 @@ const AIAnalysis = () => {
       </div>
 
       {!leetcodeData ? (
-        <div className="card text-center" style={{ padding: '50px 24px', border: '1px dashed var(--border-bright)' }}>
-          <span style={{ fontSize: '44px', display: 'block', marginBottom: '14px' }}>🧠</span>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: '18px', fontWeight: 800, marginBottom: '6px' }}>
-            Sync LeetCode ID to Run AI Weakness Analysis
-          </div>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '14px', maxWidth: '480px', margin: '0 auto 16px' }}>
-            Please sync your LeetCode profile in the Dashboard to allow the AI engine to analyze your progress and generate placement preparation insights.
-          </p>
-        </div>
+        <LeetCodeEmptyState
+          icon="🧠"
+          title="Sync LeetCode ID to Run AI Weakness Analysis"
+          subtitle="Please sync your LeetCode profile in the Dashboard to allow the AI engine to analyze your progress and generate placement preparation insights."
+        />
       ) : (
         <>
           {/* Quick overview cards */}

@@ -84,7 +84,7 @@ const DSATracker = () => {
           const cardGlow = pct >= 70 ? 'card-glow-green' : pct >= 40 ? 'card-glow-orange' : 'card-glow-pink';
 
           return (
-            <div key={t.topic} className={`card ${cardGlow}`} style={{
+            <div key={t.topic} className={`card card-interactive ${cardGlow}`} style={{
               borderColor: isEditing ? 'var(--accent-cyan)' : 'var(--border)',
               background: 'rgba(13, 11, 26, 0.35)'
             }}>

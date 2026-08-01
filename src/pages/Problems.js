@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
+import LeetCodeEmptyState from '../components/LeetCodeEmptyState';
 
 const Problems = () => {
   const { dsaProgress, generateProblems: runGenerateProblems, fetchLatestProblems, leetcodeData } = useApp();
@@ -68,15 +69,11 @@ const Problems = () => {
       </div>
 
       {!leetcodeData ? (
-        <div className="card text-center" style={{ padding: '50px 24px', border: '1px dashed var(--border-bright)' }}>
-          <span style={{ fontSize: '44px', display: 'block', marginBottom: '14px' }}>🎯</span>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: '18px', fontWeight: 800, marginBottom: '6px' }}>
-            Sync LeetCode ID to Get Problem Recommendations
-          </div>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '14px', maxWidth: '480px', margin: '0 auto 16px' }}>
-            Please sync your LeetCode profile in the Dashboard to allow the AI to target your weak spots and recommend the most impactful problems.
-          </p>
-        </div>
+        <LeetCodeEmptyState
+          icon="🎯"
+          title="Sync LeetCode ID to Get Problem Recommendations"
+          subtitle="Please sync your LeetCode profile in the Dashboard to allow the AI to target your weak spots and recommend the most impactful problems."
+        />
       ) : (
         <>
           {/* Config */}
@@ -158,7 +155,7 @@ const Problems = () => {
             const isSolved = solvedProblems.includes(i);
             const cardGlow = p.level === 'Easy' ? 'card-glow-green' : p.level === 'Medium' ? 'card-glow-orange' : 'card-glow-pink';
             return (
-              <div key={i} className={`card ${cardGlow}`} style={{
+              <div key={i} className={`card card-interactive ${cardGlow}`} style={{
                 opacity: isSolved ? 0.65 : 1, transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
                 borderColor: isSolved ? 'var(--accent-green)' : 'var(--border)',
                 background: 'rgba(13, 11, 26, 0.35)'

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
+import LeetCodeEmptyState from '../components/LeetCodeEmptyState';
 
 const MockOA = () => {
   const { dsaProgress, generateMockOA, fetchLatestMockOA, leetcodeData } = useApp();
@@ -84,15 +85,11 @@ const MockOA = () => {
       </div>
 
       {!leetcodeData ? (
-        <div className="card text-center" style={{ padding: '50px 24px', border: '1px dashed var(--border-bright)' }}>
-          <span style={{ fontSize: '44px', display: 'block', marginBottom: '14px' }}>📝</span>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: '18px', fontWeight: 800, marginBottom: '6px' }}>
-            Sync LeetCode ID to Generate Mock OA
-          </div>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '14px', maxWidth: '480px', margin: '0 auto 16px' }}>
-            Please sync your LeetCode profile in the Dashboard to practice company-style online assessments tailored to your weak topics.
-          </p>
-        </div>
+        <LeetCodeEmptyState
+          icon="📝"
+          title="Sync LeetCode ID to Generate Mock OA"
+          subtitle="Please sync your LeetCode profile in the Dashboard to practice company-style online assessments tailored to your weak topics."
+        />
       ) : (
         <>
           {/* Config Card */}

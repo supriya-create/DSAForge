@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider, useApp } from './context/AppContext';
+import { ToastProvider } from './components/ui';
 import AuthPage from './pages/AuthPage';
 import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
@@ -69,11 +70,13 @@ const MainApp = () => {
 };
 
 const App = () => (
-  <AppProvider>
-    <BrowserRouter>
-      <MainApp />
-    </BrowserRouter>
-  </AppProvider>
+  <ToastProvider>
+    <AppProvider>
+      <BrowserRouter>
+        <MainApp />
+      </BrowserRouter>
+    </AppProvider>
+  </ToastProvider>
 );
 
 export default App;

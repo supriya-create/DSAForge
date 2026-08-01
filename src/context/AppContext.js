@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react';
+import { useToast } from '../components/ui';
 
 const AppContext = createContext();
 
@@ -18,6 +19,7 @@ const DEFAULT_TOPICS = [
 ];
 
 export const AppProvider = ({ children }) => {
+  const { toast } = useToast(); // global feedback toasts (must be under ToastProvider)
   const [user, setUser] = useState(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [initializing, setInitializing] = useState(true); // true until the session is resolved from the cookie
@@ -143,9 +145,10 @@ export const AppProvider = ({ children }) => {
     });
     if (data?.success && data?.user) {
       setUser(data.user);
+      toast({ type: 'success', title: 'Profile updated' });
     }
     return data;
-  }, [request]);
+  }, [request, toast]);
 
   const runAIAnalysis = useCallback(async (progress) => {
     return await request('/api/ai/analyze', {
@@ -337,6 +340,7 @@ export const AppProvider = ({ children }) => {
       });
       const userData = data?.leetcodeData || null;
       setLeetCodeData(userData);
+      toast({ type: 'success', title: 'LeetCode synced', message: `Fetched latest stats for ${username}` });
 
       // Trigger a reload of the tracker progress and streak from the backend
       try {
@@ -357,11 +361,12 @@ export const AppProvider = ({ children }) => {
       console.error('LeetCode fetch error', err);
       setLeetCodeError('Unable to fetch LeetCode data.');
       setLeetCodeData(null);
+      toast({ type: 'error', title: 'Sync failed', message: err.message });
       return null;
     } finally {
       setLeetCodeLoading(false);
     }
-  }, [request]);
+  }, [request, toast]);
 
   // REAL per-topic progress from the backend TopicProgress collection.
   // Data integrity: no fabricated numbers — this is whatever the server returned.
