@@ -109,18 +109,37 @@ const normalizeLeetCodeProfile = (data) => {
       attendedAt: item.contest.startTime ? new Date(item.contest.startTime * 1000) : new Date(),
     }));
 
-  // Map recent submissions (only Accepted, with real language from the API).
-  // Difficulty is not returned by this endpoint and is intentionally left as
-  // null rather than fabricated as "Medium".
+  // Map recent submissions (only Accepted).
+  // LeetCode's recentSubmissionList returns `status` as a numeric code where
+  // 10 === "Accepted"; `lang` is a real language code (e.g. "cpp"). Difficulty
+  // is not returned by this endpoint and is intentionally left null rather
+  // than fabricated.
+  const LANGUAGE_NAMES = {
+    cpp: 'C++',
+    java: 'Java',
+    python: 'Python',
+    python3: 'Python3',
+    javascript: 'JavaScript',
+    typescript: 'TypeScript',
+    c: 'C',
+    go: 'Go',
+    rust: 'Rust',
+    ruby: 'Ruby',
+    kotlin: 'Kotlin',
+    swift: 'Swift',
+    csharp: 'C#',
+    php: 'PHP',
+    scala: 'Scala',
+  };
   const mappedRecentSubmissions = recentSubmissions
-    .filter((item) => item.status === 'Accepted')
+    .filter((item) => Number(item.status) === 10) // status 10 === Accepted
     .map((item) => ({
       problemTitle: item.title || '',
       problemId: item.titleSlug || item.id || '',
       difficulty: null,
       status: 'Accepted',
       timestamp: item.timestamp ? new Date(item.timestamp * 1000) : new Date(),
-      language: item.lang || null,
+      language: LANGUAGE_NAMES[item.lang] || item.lang || null,
     }));
 
   return {
