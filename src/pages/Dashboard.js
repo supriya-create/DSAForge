@@ -79,7 +79,7 @@ const Dashboard = () => {
       <div className="mb-28">
         <div className="flex-row-between flex-wrap gap-16">
           <div>
-            <h1 className="mb-4" style={{ fontFamily: 'var(--font-display)', fontSize: '30px', fontWeight: 800 }}>
+            <h1 className="mb-4" style={{ fontFamily: 'var(--font-display)', fontSize: '26px', fontWeight: 800 }}>
               Good morning, {user?.name?.split(' ')[0]} 👋
             </h1>
             <p className="flex-align-center gap-8 flex-wrap" style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>

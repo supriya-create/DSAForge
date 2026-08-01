@@ -133,8 +133,8 @@ const AuthPage = () => {
           </div>
 
           <h1 className="mb-20" style={{
-            fontFamily: 'var(--font-display)', fontSize: '54px', fontWeight: 800,
-            lineHeight: '1.1'
+            fontFamily: 'var(--font-display)', fontSize: '40px', fontWeight: 800,
+            lineHeight: '1.15'
           }}>
             <span className="gradient-text-main">Forge</span> your path<br />to placement
           </h1>
