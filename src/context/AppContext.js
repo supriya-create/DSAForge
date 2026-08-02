@@ -144,18 +144,6 @@ export const AppProvider = ({ children }) => {
     return data;
   }, [request, login]);
 
-  const updateProfile = useCallback(async (profileData) => {
-    const data = await request('/api/auth/profile', {
-      method: 'PUT',
-      body: JSON.stringify(profileData)
-    });
-    if (data?.success && data?.user) {
-      setUser(data.user);
-      toast({ type: 'success', title: 'Profile updated' });
-    }
-    return data;
-  }, [request, toast]);
-
   const runAIAnalysis = useCallback(async (progress) => {
     return await request('/api/ai/analyze', {
       method: 'POST',
@@ -382,6 +370,26 @@ export const AppProvider = ({ children }) => {
       setLeetCodeLoading(false);
     }
   }, [request, toast]);
+
+  const updateProfile = useCallback(async (profileData) => {
+    const data = await request('/api/auth/profile', {
+      method: 'PUT',
+      body: JSON.stringify(profileData)
+    });
+    if (data?.success && data?.user) {
+      const currentUsername = (user?.leetcodeUsername || user?.leetcode || '').trim().toLowerCase();
+      const newUsername = (profileData.leetcodeUsername || profileData.leetcode || '').trim().toLowerCase();
+      setUser(data.user);
+      toast({ type: 'success', title: 'Profile updated' });
+      // Auto-sync LeetCode when the username is newly set/changed, so the
+      // dashboard (solved counts, topic mastery, focus areas) populates
+      // immediately without a separate manual "Sync LeetCode" click.
+      if (newUsername && newUsername !== currentUsername) {
+        await fetchLeetCodeData(newUsername);
+      }
+    }
+    return data;
+  }, [request, toast, user, fetchLeetCodeData]);
 
   // REAL per-topic progress from the backend TopicProgress collection.
   // Data integrity: no fabricated numbers — this is whatever the server returned.
