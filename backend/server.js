@@ -13,6 +13,7 @@ const readinessRoutes = require('./routes/readinessRoutes');
 
 const app = express();
 const PORT = config.port;
+const HOST = process.env.HOST || '127.0.0.1';
 
 // Scheduler (start after server is ready)
 const { startScheduler } = require('./scheduler/leetcodeSyncScheduler');
@@ -123,8 +124,8 @@ app.use((err, req, res, next) => {
 });
 
 // Start server
-app.listen(PORT, () => {
-  console.log(`\n🚀 Server running on http://localhost:${PORT}`);
+app.listen(PORT, HOST, () => {
+  console.log(`\n🚀 Server running on http://${HOST}:${PORT}`);
   console.log(`📝 API Documentation:`);
   console.log(`   POST   /api/auth/register - Register new user`);
   console.log(`   POST   /api/auth/login - Login user`);
