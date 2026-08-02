@@ -4,10 +4,12 @@ const submissionSchema = new mongoose.Schema(
   {
     problemTitle: { type: String, trim: true },
     problemId: { type: String, trim: true },
-    difficulty: { type: String, enum: ['Easy', 'Medium', 'Hard'], default: 'Medium' },
+    // difficulty/language may be null when the LeetCode API does not provide
+    // them — we never fabricate values (previously defaulted to 'Medium').
+    difficulty: { type: String, enum: ['Easy', 'Medium', 'Hard', null], default: null },
     status: { type: String, trim: true },
     timestamp: { type: Date, default: Date.now },
-    language: { type: String, trim: true },
+    language: { type: String, trim: true, default: null },
   },
   { _id: false }
 );

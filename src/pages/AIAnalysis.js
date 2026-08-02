@@ -1,24 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-
-const CLAUDE_ANALYSIS_PROMPT = (progress) => `You are a DSA (Data Structures & Algorithms) coach analyzing a student's problem-solving progress for placement preparation.
-
-Here is the student's current DSA progress data:
-${progress.map(t => `- ${t.topic}: ${t.solved} solved (Easy: ${t.easy}, Medium: ${t.medium}, Hard: ${t.hard}) out of ${t.total} problems`).join('\n')}
-
-Please analyze this data and provide:
-
-1. **STRENGTH ANALYSIS**: List topics where the student is performing well (>60% completion) with brief reasons.
-
-2. **WEAKNESS ANALYSIS**: List topics that need immediate attention (<40% completion) with specific gaps.
-
-3. **PRIORITY ACTION ITEMS**: Give 3-5 specific, actionable steps the student should take this week.
-
-4. **INTERVIEW READINESS**: Rate their overall readiness for placement interviews (1-10) with a brief justification.
-
-5. **QUICK WINS**: Suggest 2-3 topics they can quickly improve to boost their confidence.
-
-Format your response clearly with these exact sections. Be specific and encouraging. Keep it concise but insightful.`;
+import LeetCodeEmptyState from '../components/LeetCodeEmptyState';
 
 const isStructuredAnalysis = (analysis) => {
   return analysis && typeof analysis === 'object' && !Array.isArray(analysis) && ('weakestTopics' in analysis || 'difficultyAnalysis' in analysis);
@@ -264,15 +246,11 @@ const AIAnalysis = () => {
       </div>
 
       {!leetcodeData ? (
-        <div className="card text-center" style={{ padding: '50px 24px', border: '1px dashed var(--border-bright)' }}>
-          <span style={{ fontSize: '44px', display: 'block', marginBottom: '14px' }}>🧠</span>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: '18px', fontWeight: 800, marginBottom: '6px' }}>
-            Sync LeetCode ID to Run AI Weakness Analysis
-          </div>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '14px', maxWidth: '480px', margin: '0 auto 16px' }}>
-            Please sync your LeetCode profile in the Dashboard to allow the AI engine to analyze your progress and generate placement preparation insights.
-          </p>
-        </div>
+        <LeetCodeEmptyState
+          icon="🧠"
+          title="Sync LeetCode ID to Run AI Weakness Analysis"
+          subtitle="Please sync your LeetCode profile in the Dashboard to allow the AI engine to analyze your progress and generate placement preparation insights."
+        />
       ) : (
         <>
           {/* Quick overview cards */}

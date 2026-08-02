@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Syne:wght@400;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@400;500;600;700;800&family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
 
 * {
   margin: 0;
@@ -27,9 +27,9 @@
   --text-secondary: #9CA3AF;
   --text-muted: #6B7280;
   
-  --font-display: 'Syne', sans-serif;
-  --font-body: 'Space Grotesk', sans-serif;
-  --font-mono: 'JetBrains Mono', monospace;
+  --font-display: 'Unbounded', 'Space Grotesk', sans-serif;
+  --font-body: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'Space Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   
   --glow-cyan: 0 0 25px rgba(0, 242, 254, 0.2);
   --glow-purple: 0 0 25px rgba(157, 78, 221, 0.2);
@@ -209,6 +209,15 @@ body {
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   width: 100%;
   text-align: left;
+  /* Now rendered as an <a> (react-router NavLink) — remove default link chrome */
+  text-decoration: none;
+  box-sizing: border-box;
+}
+
+/* Full-screen loading state shown while the session cookie is being resolved */
+.auth-loading {
+  min-height: 100vh;
+  background: var(--bg-deep);
 }
 .sidebar-nav-btn:hover {
   background: rgba(255, 255, 255, 0.02);
@@ -443,7 +452,7 @@ textarea.input-field { resize: vertical; min-height: 140px; }
   font-weight: 800;
   color: var(--text-primary);
   margin-bottom: 6px;
-  letter-spacing: -0.5px;
+  letter-spacing: -0.5px; /* Unbounded is wide — tighter tracking keeps it punchy */
 }
 .section-subtitle {
   font-size: 15px;
@@ -698,4 +707,84 @@ textarea.input-field { resize: vertical; min-height: 140px; }
 .timeline-content:hover {
   border-color: rgba(255, 255, 255, 0.08);
   transform: translateX(4px);
+}
+
+/* ===== UI component library ===== */
+
+/* Toast notifications */
+.toast-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 360px;
+  pointer-events: none;
+}
+.toast {
+  pointer-events: auto;
+  text-align: left;
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  color: var(--text-primary);
+  background: var(--bg-card-solid);
+  border: 1px solid var(--border-bright);
+  border-left: 3px solid var(--accent-cyan);
+  border-radius: 12px;
+  padding: 12px 16px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+  animation: toast-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.toast strong { font-weight: 700; }
+.toast-message { margin-top: 2px; color: var(--text-secondary); font-size: 12.5px; }
+.toast-success { border-left-color: var(--accent-green); }
+.toast-error { border-left-color: var(--accent-pink); }
+.toast-info { border-left-color: var(--accent-cyan); }
+@keyframes toast-in {
+  from { opacity: 0; transform: translateX(24px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* Guided empty state */
+.empty-state {
+  padding: 44px 28px;
+  border: 1px dashed var(--border-bright);
+}
+.empty-state-icon { font-size: 40px; display: block; margin-bottom: 12px; }
+.empty-state-title { font-family: var(--font-display); font-size: 18px; font-weight: 800; margin-bottom: 6px; }
+.empty-state-subtitle { color: var(--text-secondary); font-size: 14px; max-width: 440px; margin: 0 auto; }
+.empty-state-action { margin-top: 18px; }
+
+/* Skeleton loading placeholder */
+.skeleton {
+  background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s infinite;
+}
+@keyframes skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Interactive card hover */
+.card-interactive {
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.25s, box-shadow 0.25s;
+}
+.card-interactive:hover {
+  transform: translateY(-2px);
+  border-color: rgba(0, 242, 254, 0.18);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+}
+
+/* Respect users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }

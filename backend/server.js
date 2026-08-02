@@ -2,15 +2,18 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const cors = require('cors');
-require('dotenv').config();
+const helmet = require('helmet');
+const config = require('./config/env');
 const connectDB = require('./config/db');
 const authRoutes = require('./routes/authRoutes');
 const aiRoutes = require('./routes/aiRoutes');
 const trackerRoutes = require('./routes/trackerRoutes');
 const leetcodeRoutes = require('./routes/leetcodeRoutes');
+const readinessRoutes = require('./routes/readinessRoutes');
 
 const app = express();
-const PORT = process.env.PORT || 5001;
+const PORT = config.port;
+const HOST = process.env.HOST || '127.0.0.1';
 
 // Scheduler (start after server is ready)
 const { startScheduler } = require('./scheduler/leetcodeSyncScheduler');
@@ -18,32 +21,36 @@ const { startScheduler } = require('./scheduler/leetcodeSyncScheduler');
 // Connect to MongoDB
 connectDB();
 
-// Security Headers Middleware (CSP, HSTS, secure transport)
-app.use((req, res, next) => {
-  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'DENY');
-  res.setHeader('X-XSS-Protection', '1; mode=block');
-  res.setHeader('Referrer-Policy', 'no-referrer');
-  res.setHeader('Content-Security-Policy', 
-    "default-src 'self'; " +
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://accounts.google.com/gsi/client; " +
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com/gsi/style; " +
-    "font-src 'self' https://fonts.gstatic.com; " +
-    "img-src 'self' data: https:; " +
-    "frame-src 'self' https://accounts.google.com/; " +
-    "connect-src 'self' https://generativelanguage.googleapis.com https://leetcode.com https://accounts.google.com/gsi/;"
-  );
-  next();
-});
+// Security Headers via Helmet (CSP, HSTS, no-sniff, frame/frame-options, etc.)
+// Security: CSP drops 'unsafe-eval' and 'unsafe-inline' for scripts. Inline
+// <style> attributes (used by React) still require 'unsafe-inline' for
+// style-src, which is acceptable and kept scoped to styles only.
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", 'https://cdn.jsdelivr.net', 'https://accounts.google.com/gsi/client'],
+      styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://accounts.google.com/gsi/style'],
+      fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+      imgSrc: ["'self'", 'data:', 'https:'],
+      frameSrc: ["'self'", 'https://accounts.google.com/'],
+      connectSrc: ["'self'", 'https://accounts.google.com/gsi/'],
+      objectSrc: ["'none'"],
+      baseUri: ["'self'"],
+    },
+  },
+  crossOriginEmbedderPolicy: false,
+}));
 
 // Middleware
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-  credentials: true
+  origin: config.frontendUrl,
+  credentials: true // required so the httpOnly cookie is sent on cross-origin requests
 }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+
+// Security: cap request body size to reject abusive/huge AI payloads.
+app.use(express.json({ limit: '256kb' }));
+app.use(express.urlencoded({ extended: true, limit: '256kb' }));
 
 // Request logging middleware
 app.use((req, res, next) => {
@@ -65,6 +72,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/tracker', trackerRoutes);
 app.use('/api/leetcode', leetcodeRoutes);
+app.use('/api/readiness', readinessRoutes);
 
 // Serve frontend build if it exists (so backend can host both frontend + API)
 const buildPath = path.join(__dirname, '..', 'build');
@@ -116,8 +124,8 @@ app.use((err, req, res, next) => {
 });
 
 // Start server
-app.listen(PORT, () => {
-  console.log(`\n🚀 Server running on http://localhost:${PORT}`);
+app.listen(PORT, HOST, () => {
+  console.log(`\n🚀 Server running on http://${HOST}:${PORT}`);
   console.log(`📝 API Documentation:`);
   console.log(`   POST   /api/auth/register - Register new user`);
   console.log(`   POST   /api/auth/login - Login user`);

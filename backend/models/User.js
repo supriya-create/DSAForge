@@ -20,13 +20,15 @@ const userSchema = new mongoose.Schema(
     password: {
       type: String,
       required: [true, 'Please provide a password'],
-      minlength: [6, 'Password should be at least 6 characters'],
+      minlength: [8, 'Password should be at least 8 characters'],
       select: false
     },
     avatar: {
       type: String,
       default: null
     },
+    // LEGACY FIELD: kept only for backward compatibility with old documents.
+    // The canonical field is `leetcodeUsername`. Use that in all new code.
     leetcode: {
       type: String,
       default: null

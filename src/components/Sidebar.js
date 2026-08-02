@@ -1,24 +1,20 @@
 import React from 'react';
+import { NavLink } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 
 const navItems = [
-  { id: 'dashboard', icon: '⚡', label: 'Dashboard' },
-  { id: 'tracker', icon: '📊', label: 'DSA Tracker' },
-  { id: 'analysis', icon: '🧠', label: 'AI Analysis' },
-  { id: 'roadmap', icon: '🗺', label: 'Roadmap' },
-  { id: 'problems', icon: '🎯', label: 'Problems' },
-  { id: 'mockoa', icon: '📝', label: 'Mock OA' },
-  { id: 'readiness', icon: '🏆', label: 'Readiness' },
-  { id: 'doubt', icon: '🤖', label: 'AI Doubts' },
+  { path: '/', id: 'dashboard', icon: '⚡', label: 'Dashboard', end: true },
+  { path: '/tracker', id: 'tracker', icon: '📊', label: 'DSA Tracker' },
+  { path: '/analysis', id: 'analysis', icon: '🧠', label: 'AI Analysis' },
+  { path: '/roadmap', id: 'roadmap', icon: '🗺', label: 'Roadmap' },
+  { path: '/problems', id: 'problems', icon: '🎯', label: 'Problems' },
+  { path: '/mockoa', id: 'mockoa', icon: '📝', label: 'Mock OA' },
+  { path: '/readiness', id: 'readiness', icon: '🏆', label: 'Readiness' },
+  { path: '/doubt', id: 'doubt', icon: '🤖', label: 'AI Doubts' },
 ];
 
 const Sidebar = ({ isOpen, onClose }) => {
-  const { user, activeTab, setActiveTab, logout, streak, totalSolved } = useApp();
-
-  const handleTabClick = (id) => {
-    setActiveTab(id);
-    if (onClose) onClose(); // close sidebar drawer on mobile after clicking
-  };
+  const { user, logout, streak, totalSolved } = useApp();
 
   return (
     <div className={`sidebar ${isOpen ? 'open' : ''}`}>
@@ -44,14 +40,16 @@ const Sidebar = ({ isOpen, onClose }) => {
       {/* Nav */}
       <nav style={{ flex: 1, padding: '24px 14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
         {navItems.map(item => (
-          <button
+          <NavLink
             key={item.id}
-            onClick={() => handleTabClick(item.id)}
-            className={`sidebar-nav-btn ${activeTab === item.id ? 'active' : ''}`}
+            to={item.path}
+            end={item.end}
+            onClick={() => onClose && onClose()} // close sidebar drawer on mobile after navigating
+            className={({ isActive }) => `sidebar-nav-btn ${isActive ? 'active' : ''}`}
           >
             <span style={{ fontSize: '16px' }}>{item.icon}</span>
             <span>{item.label}</span>
-          </button>
+          </NavLink>
         ))}
       </nav>
 

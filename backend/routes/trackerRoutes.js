@@ -8,9 +8,11 @@ const router = express.Router();
 router.get('/', authenticate, trackerController.getTrackerData);
 router.post('/progress', authenticate, trackerController.addTopicProgress);
 router.put('/progress/:topic', authenticate, trackerController.updateTopicProgress);
-router.put('/streak', authenticate, trackerController.updateStreak);
+router.delete('/progress/:topic', authenticate, trackerController.deleteTopicProgress);
 router.get('/leetcode', authenticate, trackerController.getLeetCodeData);
 router.post('/leetcode/sync', authenticate, trackerController.syncLeetCodeData);
 router.get('/activity', authenticate, trackerController.getWeeklyActivity);
+// Note: the client-set streak endpoint (PUT /streak) was removed — streak is
+// now computed server-side from DailyActivity and cannot be forged.
 
 module.exports = router;

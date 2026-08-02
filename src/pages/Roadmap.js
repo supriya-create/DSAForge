@@ -1,25 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-
-const ROADMAP_PROMPT = (progress, weeks) => `You are a DSA placement preparation coach. Create a ${weeks}-week personalized study roadmap for this student.
-
-Student's current DSA progress:
-${progress.map(t => `- ${t.topic}: ${t.solved} solved (${Math.round((t.solved/t.total)*100)}% complete)`).join('\n')}
-
-Create a detailed week-by-week roadmap that:
-1. Prioritizes weak areas (low completion %)
-2. Builds on existing strengths
-3. Follows a logical learning progression
-4. Includes specific topics/subtopics for each week
-
-Format EXACTLY like this for each week:
-WEEK [N]: [Theme Title]
-- [Subtopic 1]
-- [Subtopic 2]  
-- [Subtopic 3]
-GOAL: [Weekly goal in one sentence]
-
-Generate all ${weeks} weeks in this format. Be specific with subtopics.`;
+import LeetCodeEmptyState from '../components/LeetCodeEmptyState';
 
 const Roadmap = () => {
   const { dsaProgress, generateAIRoadmap, fetchLatestRoadmap, leetcodeData } = useApp();
@@ -92,15 +73,11 @@ const Roadmap = () => {
       </div>
 
       {!leetcodeData ? (
-        <div className="card text-center" style={{ padding: '50px 24px', border: '1px dashed var(--border-bright)' }}>
-          <span style={{ fontSize: '44px', display: 'block', marginBottom: '14px' }}>🗺️</span>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: '18px', fontWeight: 800, marginBottom: '6px' }}>
-            Sync LeetCode ID to Generate Study Plan
-          </div>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '14px', maxWidth: '480px', margin: '0 auto 16px' }}>
-            Please sync your LeetCode profile in the Dashboard to allow the AI to generate a personalized week-by-week study roadmap based on your progress.
-          </p>
-        </div>
+        <LeetCodeEmptyState
+          icon="🗺️"
+          title="Sync LeetCode ID to Generate Study Plan"
+          subtitle="Please sync your LeetCode profile in the Dashboard to allow the AI to generate a personalized week-by-week study roadmap based on your progress."
+        />
       ) : (
         <>
           {/* Config Card */}

@@ -5,6 +5,8 @@ const { syncLeetCodeProfile } = require('../services/leetcodeService');
 const { validationResult } = require('express-validator');
 const { validateEmailIsReal } = require('../services/emailValidator');
 const { OAuth2Client } = require('google-auth-library');
+const config = require('../config/env');
+const { setAuthCookie, clearAuthCookie } = require('../middleware/authCookie');
 
 const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
 
@@ -29,14 +31,12 @@ const buildLeetCodePayload = (stats) => {
   };
 };
 
-// Generate JWT Token
+// Generate JWT Token.
+// Security: uses the validated config secret. The app refuses to start if
+// JWT_SECRET is missing (config/env.js), so no fallback secret is possible.
 const generateToken = (userId) => {
-  const secret = process.env.JWT_SECRET || 'dev-default-jwt-secret-change-me';
-  if (!process.env.JWT_SECRET) {
-    console.warn('Warning: JWT_SECRET is not set. Using a development fallback secret. Do not use in production.');
-  }
-  return jwt.sign({ id: userId }, secret, {
-    expiresIn: process.env.JWT_EXPIRE || '7d'
+  return jwt.sign({ id: userId }, config.jwtSecret, {
+    expiresIn: config.jwtExpire
   });
 };
 
@@ -84,21 +84,14 @@ exports.register = async (req, res) => {
 
     await user.save();
 
-    // Generate token
-    const token = generateToken(user._id);
-
-    // Set HttpOnly cookie
-    res.cookie('token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-    });
+    // Generate token and set the httpOnly session cookie.
+    // Security: the token is only ever sent to the client as an httpOnly cookie
+    // (never in the response body / localStorage), so it is not readable by JS/XSS.
+    setAuthCookie(res, generateToken(user._id));
 
     res.status(201).json({
       success: true,
       message: 'User registered successfully',
-      token,
       user: user.toJSON()
     });
   } catch (error) {
@@ -157,7 +150,7 @@ exports.login = async (req, res) => {
     await user.save();
 
     const cachedStats = await LeetcodeStats.findOne({ userId: user._id }).lean();
-    const username = user.leetcodeUsername || user.leetcode || null;
+    const username = user.leetcodeUsername || null;
     const shouldSync = !cachedStats || !cachedStats.lastSynced || (Date.now() - new Date(cachedStats.lastSynced).getTime()) > TWENTY_FOUR_HOURS;
 
     if (shouldSync && username) {
@@ -170,21 +163,12 @@ exports.login = async (req, res) => {
       })();
     }
 
-    // Generate token
-    const token = generateToken(user._id);
-
-    // Set HttpOnly cookie
-    res.cookie('token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-    });
+    // Set the httpOnly session cookie (token never exposed to JS).
+    setAuthCookie(res, generateToken(user._id));
 
     res.status(200).json({
       success: true,
       message: 'Login successful',
-      token,
       user: user.toJSON(),
       leetcodeData: buildLeetCodePayload(cachedStats),
       leetcodeSyncTriggered: Boolean(shouldSync && username)
@@ -225,13 +209,16 @@ exports.getCurrentUser = async (req, res) => {
 // Update User Profile
 exports.updateProfile = async (req, res) => {
   try {
-    const { name, leetcode, college, year, phone } = req.body;
+    // Unify on the canonical leetcodeUsername field (was previously split
+    // between `leetcode` and `leetcodeUsername`).
+    const { name, leetcode, leetcodeUsername, college, year, phone } = req.body;
+    const canonicalUsername = leetcodeUsername || leetcode || null;
 
     const user = await User.findByIdAndUpdate(
       req.userId,
       {
         ...(name && { name }),
-        ...(leetcode && { leetcode }),
+        ...(canonicalUsername && { leetcodeUsername: canonicalUsername }),
         ...(college && { college }),
         ...(year && { year }),
         ...(phone && { phone })
@@ -263,14 +250,16 @@ exports.updateProfile = async (req, res) => {
 // Change Password
 exports.changePassword = async (req, res) => {
   try {
-    const { currentPassword, newPassword } = req.body;
-
-    if (!currentPassword || !newPassword) {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
       return res.status(400).json({
         success: false,
-        message: 'Current password and new password are required'
+        message: 'Validation failed',
+        errors: errors.array()
       });
     }
+
+    const { currentPassword, newPassword } = req.body;
 
     const user = await User.findById(req.userId).select('+password');
     if (!user) {
@@ -309,11 +298,7 @@ exports.changePassword = async (req, res) => {
 // Logout
 exports.logout = async (req, res) => {
   try {
-    res.clearCookie('token', {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict'
-    });
+    clearAuthCookie(res);
     res.status(200).json({
       success: true,
       message: 'Logout successful'
@@ -363,12 +348,19 @@ exports.googleLogin = async (req, res) => {
       });
     }
 
-    // Verify Google ID Token
-    // We try to verify using process.env.GOOGLE_CLIENT_ID
-    // If not configured, we fallback to a default client ID for local testing.
-    const clientId = process.env.GOOGLE_CLIENT_ID || '679460937668-ic577i6t2f1gmu5vj9ga2kl3ka3v917g.apps.googleusercontent.com';
+    // Verify Google ID Token.
+    // Security: the client ID must come from the environment. There is no
+    // hardcoded fallback — Google login is disabled with a clear error if the
+    // server has not been configured with GOOGLE_CLIENT_ID.
+    const clientId = config.googleClientId;
+    if (!clientId) {
+      return res.status(503).json({
+        success: false,
+        message: 'Google sign-in is not configured on this server.'
+      });
+    }
     const localClient = new OAuth2Client(clientId);
-    
+
     let payload;
     try {
       const ticket = await localClient.verifyIdToken({
@@ -424,19 +416,11 @@ exports.googleLogin = async (req, res) => {
       await user.save();
     }
 
-    // Generate JWT token for session
-    const token = generateToken(user._id);
-
-    // Set HttpOnly cookie
-    res.cookie('token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-    });
+    // Set the httpOnly session cookie.
+    setAuthCookie(res, generateToken(user._id));
 
     const cachedStats = await LeetcodeStats.findOne({ userId: user._id }).lean();
-    const username = user.leetcodeUsername || user.leetcode || null;
+    const username = user.leetcodeUsername || null;
     const shouldSync = !cachedStats || !cachedStats.lastSynced || (Date.now() - new Date(cachedStats.lastSynced).getTime()) > TWENTY_FOUR_HOURS;
 
     if (shouldSync && username) {
@@ -452,7 +436,6 @@ exports.googleLogin = async (req, res) => {
     res.status(200).json({
       success: true,
       message: isNewUser ? 'User registered and logged in via Google successfully' : 'Login successful via Google',
-      token,
       user: user.toJSON(),
       leetcodeData: buildLeetCodePayload(cachedStats),
       leetcodeSyncTriggered: Boolean(shouldSync && username)

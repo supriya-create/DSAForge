@@ -1,4 +1,7 @@
-const { User, LeetCodeStat, LeetcodeStats, Streak, DailyActivity } = require('../models');
+const { User, LeetcodeStats, Streak, DailyActivity } = require('../models');
+const { getStreakData } = require('./streakService');
+const { deriveTopicProgress } = require('./topicService');
+const { utcDay, utcDayKey } = require('./dateUtils');
 
 const LEETCODE_GRAPHQL_URL = 'https://leetcode.com/graphql';
 
@@ -34,10 +37,7 @@ const log = (level, message, meta = {}) => {
 
 const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
 
-const isTransientStatus = (status) => {
-  // Treat 429 and 5xx as transient
-  return status === 429 || (status >= 500 && status < 600);
-};
+const isTransientStatus = (status) => status === 429 || (status >= 500 && status < 600);
 
 const buildLeetCodeQuery = () => `
   query leetcodeStats($username: String!) {
@@ -49,11 +49,8 @@ const buildLeetCodeQuery = () => `
         reputation
       }
       submitStats {
-        acSubmissionNum {
-          difficulty
-          count
-          submissions
-        }
+        acSubmissionNum { difficulty count submissions }
+        totalSubmissionNum { difficulty count submissions }
       }
     }
     userContestRanking(username: $username) {
@@ -65,22 +62,19 @@ const buildLeetCodeQuery = () => `
     }
     userContestRankingHistory(username: $username) {
       attended
-      trendDirection
       problemsSolved
       totalProblems
       finishTimeInSeconds
       rating
       ranking
-      contest {
-        title
-        startTime
-      }
+      contest { title startTime }
     }
-    recentAcSubmissionList(username: $username, limit: 15) {
-      id
+    recentSubmissionList(username: $username, limit: 20) {
       title
       titleSlug
       timestamp
+      lang
+      status
     }
   }
 `;
@@ -89,50 +83,82 @@ const normalizeLeetCodeProfile = (data) => {
   const matchedUser = data?.matchedUser;
   const contestRanking = data?.userContestRanking;
   const contestHistory = data?.userContestRankingHistory || [];
-  const recentSubmissions = data?.recentAcSubmissionList || [];
+  const recentSubmissions = data?.recentSubmissionList || [];
 
   const submissions = matchedUser?.submitStats?.acSubmissionNum || [];
-  const easyCount = submissions.find((entry) => entry.difficulty === 'Easy')?.count || 0;
-  const mediumCount = submissions.find((entry) => entry.difficulty === 'Medium')?.count || 0;
-  const hardCount = submissions.find((entry) => entry.difficulty === 'Hard')?.count || 0;
-  const totalCount = submissions.find((entry) => entry.difficulty === 'All')?.count || (easyCount + mediumCount + hardCount);
+  const totals = matchedUser?.submitStats?.totalSubmissionNum || [];
+
+  const countFor = (arr, difficulty) => arr.find((e) => e.difficulty === difficulty)?.count || 0;
+  const easyCount = countFor(submissions, 'Easy');
+  const mediumCount = countFor(submissions, 'Medium');
+  const hardCount = countFor(submissions, 'Hard');
+  const totalAccepted = countFor(submissions, 'All') || (easyCount + mediumCount + hardCount);
+  const totalAttempted = countFor(totals, 'All');
+
+  // Real acceptance rate. null when there is no attempt data (never fake 0).
+  const acceptanceRate = totalAttempted > 0
+    ? Math.round((totalAccepted / totalAttempted) * 100)
+    : null;
 
   // Map contest history
   const mappedContestHistory = contestHistory
-    .filter(item => item.attended && item.contest)
-    .map(item => ({
+    .filter((item) => item.attended && item.contest)
+    .map((item) => ({
       contestId: item.contest.title || '',
       rank: item.ranking || 0,
       rating: Math.round(item.rating) || 0,
-      attendedAt: item.contest.startTime ? new Date(item.contest.startTime * 1000) : new Date()
+      attendedAt: item.contest.startTime ? new Date(item.contest.startTime * 1000) : new Date(),
     }));
 
-  // Map recent submissions
-  const mappedRecentSubmissions = recentSubmissions.map(item => ({
-    problemTitle: item.title || '',
-    problemId: item.id || item.titleSlug || '',
-    difficulty: 'Medium', // Default since recentAcSubmissionList doesn't return difficulty
-    status: 'Accepted',
-    timestamp: item.timestamp ? new Date(item.timestamp * 1000) : new Date(),
-    language: 'C++' // Default
-  }));
+  // Map recent submissions (only Accepted).
+  // LeetCode's recentSubmissionList returns `status` as a numeric code where
+  // 10 === "Accepted"; `lang` is a real language code (e.g. "cpp"). Difficulty
+  // is not returned by this endpoint and is intentionally left null rather
+  // than fabricated.
+  const LANGUAGE_NAMES = {
+    cpp: 'C++',
+    java: 'Java',
+    python: 'Python',
+    python3: 'Python3',
+    javascript: 'JavaScript',
+    typescript: 'TypeScript',
+    c: 'C',
+    go: 'Go',
+    rust: 'Rust',
+    ruby: 'Ruby',
+    kotlin: 'Kotlin',
+    swift: 'Swift',
+    csharp: 'C#',
+    php: 'PHP',
+    scala: 'Scala',
+  };
+  const mappedRecentSubmissions = recentSubmissions
+    .filter((item) => Number(item.status) === 10) // status 10 === Accepted
+    .map((item) => ({
+      problemTitle: item.title || '',
+      problemId: item.titleSlug || item.id || '',
+      difficulty: null,
+      status: 'Accepted',
+      timestamp: item.timestamp ? new Date(item.timestamp * 1000) : new Date(),
+      language: LANGUAGE_NAMES[item.lang] || item.lang || null,
+    }));
 
   return {
     username: matchedUser?.username || null,
     profile: matchedUser?.profile || null,
-    submitStats: matchedUser?.submitStats || null,
     summary: {
-      totalSolved: totalCount,
+      totalSolved: totalAccepted,
       easySolved: easyCount,
       mediumSolved: mediumCount,
       hardSolved: hardCount,
       ranking: matchedUser?.profile?.ranking || null,
+      acceptanceRate,
     },
     contestRating: contestRanking ? Math.round(contestRanking.rating) : 0,
     contestHistory: mappedContestHistory,
     recentSubmissions: mappedRecentSubmissions,
-    badges: [],
-    languageStats: []
+    badges: null, // not returned by the public API — honestly null, never fabricated
+    languageStats: null, // not returned by the public API — honestly null, never fabricated
   };
 };
 
@@ -142,20 +168,17 @@ const fetchLeetCodeProfile = async (username, { fetchImpl = fetch } = {}) => {
   }
   username = username.trim();
 
-  // Serve from cache if fresh
   const cached = cache.get(username);
   if (cached && cached.expiresAt > Date.now()) {
     log('debug', 'cache_hit', { username });
     return cached.data;
   }
 
-  // If a request for this username is already in-flight, reuse its Promise
   if (inflight.has(username)) {
     log('debug', 'dedupe_inflight', { username });
     return inflight.get(username);
   }
 
-  // Create a promise and store in inflight map
   const promise = (async () => {
     let attempt = 0;
     let backoff = INITIAL_FETCH_BACKOFF_MS;
@@ -167,12 +190,9 @@ const fetchLeetCodeProfile = async (username, { fetchImpl = fetch } = {}) => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'User-Agent': process.env.LEETCODE_USER_AGENT || 'DSAForge/1.0 (+https://example.com)'
+            'User-Agent': process.env.LEETCODE_USER_AGENT || 'DSAForge/1.0 (+https://example.com)',
           },
-          body: JSON.stringify({
-            query: buildLeetCodeQuery(),
-            variables: { username },
-          }),
+          body: JSON.stringify({ query: buildLeetCodeQuery(), variables: { username } }),
         });
 
         if (!response.ok) {
@@ -181,13 +201,12 @@ const fetchLeetCodeProfile = async (username, { fetchImpl = fetch } = {}) => {
           log('warn', 'fetch_response_not_ok', { username, status, retryAfter });
           if (isTransientStatus(status) && attempt <= MAX_FETCH_RETRIES) {
             const waitMs = retryAfter > 0 ? retryAfter * 1000 : backoff;
-            log('info', 'transient_retry', { username, attempt, waitMs });
             await sleep(waitMs);
             backoff *= 2;
             continue;
           }
           if (status === 404) {
-            throw new AppError(404, `LeetCode user \"${username}\" not found`);
+            throw new AppError(404, `LeetCode user "${username}" not found`);
           }
           throw new AppError(502, `LeetCode API returned status ${status}`);
         }
@@ -195,28 +214,22 @@ const fetchLeetCodeProfile = async (username, { fetchImpl = fetch } = {}) => {
         const resData = await response.json();
         const matchedUser = resData?.data?.matchedUser;
         if (!matchedUser) {
-          throw new AppError(404, `LeetCode user \"${username}\" not found`);
+          throw new AppError(404, `LeetCode user "${username}" not found`);
         }
 
         const normalized = normalizeLeetCodeProfile(resData.data);
-        // Cache result
         cache.set(username, { data: normalized, expiresAt: Date.now() + CACHE_TTL_MS });
         log('info', 'fetch_success', { username });
         return normalized;
       } catch (err) {
-        // If it's an AppError that's non-transient, rethrow immediately
         if (err instanceof AppError && err.statusCode && err.statusCode < 500 && err.statusCode !== 429) {
           log('error', 'fetch_nonretriable_error', { username, message: err.message });
           throw err;
         }
-
-        // Last attempt: throw
         if (attempt > MAX_FETCH_RETRIES) {
           log('error', 'fetch_exhausted', { username, attempt, message: err.message });
           throw new AppError(502, `Failed to fetch LeetCode profile for ${username}: ${err.message}`);
         }
-
-        // Transient error - backoff and retry
         log('warn', 'fetch_transient_error', { username, attempt, message: err.message });
         await sleep(backoff);
         backoff *= 2;
@@ -227,8 +240,7 @@ const fetchLeetCodeProfile = async (username, { fetchImpl = fetch } = {}) => {
 
   inflight.set(username, promise);
   try {
-    const result = await promise;
-    return result;
+    return await promise;
   } finally {
     inflight.delete(username);
   }
@@ -236,73 +248,24 @@ const fetchLeetCodeProfile = async (username, { fetchImpl = fetch } = {}) => {
 
 const getStoredLeetCodeProfile = async ({ userId }) => {
   const leetcodeStats = await LeetcodeStats.findOne({ userId }).lean();
-  if (leetcodeStats) {
-    return {
-      username: leetcodeStats.username,
-      summary: {
-        totalSolved: leetcodeStats.totalSolved,
-        easySolved: leetcodeStats.easySolved,
-        mediumSolved: leetcodeStats.mediumSolved,
-        hardSolved: leetcodeStats.hardSolved,
-        ranking: leetcodeStats.ranking,
-      },
-      contestRating: leetcodeStats.contestRating,
-      contestHistory: leetcodeStats.contestHistory,
-      recentSubmissions: leetcodeStats.recentSubmissions,
-      badges: leetcodeStats.badges,
-      languageStats: leetcodeStats.languageStats,
-      lastSynced: leetcodeStats.lastSynced,
-    };
-  }
-
-  const legacyStat = await LeetCodeStat.findOne({ user: userId });
-  return legacyStat ? legacyStat.rawProfile : null;
-};
-
-const calculateStreakFromSubmissions = (submissions) => {
-  if (!submissions || submissions.length === 0) return 0;
-
-  const uniqueDates = Array.from(new Set(
-    submissions
-      .map(sub => {
-        if (!sub.timestamp) return null;
-        const d = new Date(sub.timestamp);
-        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      })
-      .filter(Boolean)
-  )).sort((a, b) => new Date(b) - new Date(a));
-
-  if (uniqueDates.length === 0) return 0;
-
-  const today = new Date();
-  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-  
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
-
-  const firstDate = uniqueDates[0];
-  if (firstDate !== todayStr && firstDate !== yesterdayStr) {
-    return 0;
-  }
-
-  let currentStreak = 1;
-  let currentRefDate = new Date(firstDate);
-
-  for (let i = 1; i < uniqueDates.length; i++) {
-    const nextDate = new Date(uniqueDates[i]);
-    const diffTime = Math.abs(currentRefDate - nextDate);
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-    if (diffDays === 1) {
-      currentStreak++;
-      currentRefDate = nextDate;
-    } else if (diffDays > 1) {
-      break;
-    }
-  }
-
-  return currentStreak;
+  if (!leetcodeStats) return null;
+  return {
+    username: leetcodeStats.username,
+    summary: {
+      totalSolved: leetcodeStats.totalSolved,
+      easySolved: leetcodeStats.easySolved,
+      mediumSolved: leetcodeStats.mediumSolved,
+      hardSolved: leetcodeStats.hardSolved,
+      ranking: leetcodeStats.ranking,
+      acceptanceRate: leetcodeStats.acceptanceRate,
+    },
+    contestRating: leetcodeStats.contestRating,
+    contestHistory: leetcodeStats.contestHistory,
+    recentSubmissions: leetcodeStats.recentSubmissions,
+    badges: leetcodeStats.badges ?? null,
+    languageStats: leetcodeStats.languageStats ?? null,
+    lastSynced: leetcodeStats.lastSynced,
+  };
 };
 
 const syncLeetCodeProfile = async ({ userId, username, fetchImpl = fetch }) => {
@@ -311,14 +274,13 @@ const syncLeetCodeProfile = async ({ userId, username, fetchImpl = fetch }) => {
 
   if (!leetcodeUsername) {
     const user = await User.findById(userId);
-    leetcodeUsername = user?.leetcodeUsername || user?.leetcode || '';
+    leetcodeUsername = user?.leetcodeUsername || '';
   }
 
   if (!leetcodeUsername) {
     throw new AppError(400, 'LeetCode username is required or not set in profile');
   }
 
-  // Use the improved fetch which includes caching and retries
   const normalizedProfile = await fetchLeetCodeProfile(leetcodeUsername, { fetchImpl });
 
   if (!normalizedProfile || !normalizedProfile.summary) {
@@ -332,13 +294,13 @@ const syncLeetCodeProfile = async ({ userId, username, fetchImpl = fetch }) => {
     easySolved: normalizedProfile.summary.easySolved || 0,
     mediumSolved: normalizedProfile.summary.mediumSolved || 0,
     hardSolved: normalizedProfile.summary.hardSolved || 0,
-    acceptanceRate: 0,
+    acceptanceRate: normalizedProfile.summary.acceptanceRate ?? null,
     ranking: normalizedProfile.summary.ranking || null,
     contestRating: normalizedProfile.contestRating || 0,
     contestHistory: normalizedProfile.contestHistory || [],
     recentSubmissions: normalizedProfile.recentSubmissions || [],
-    badges: normalizedProfile.badges || [],
-    languageStats: normalizedProfile.languageStats || [],
+    badges: normalizedProfile.badges ?? null,
+    languageStats: normalizedProfile.languageStats ?? null,
     lastSynced: new Date(),
   };
 
@@ -348,85 +310,99 @@ const syncLeetCodeProfile = async ({ userId, username, fetchImpl = fetch }) => {
     { upsert: true, new: true, setDefaultsOnInsert: true }
   );
 
-  // Sync Streak collection
-  const calculatedStreak = calculateStreakFromSubmissions(normalizedProfile.recentSubmissions);
-  const streakDoc = await Streak.findOne({ user: userId });
-  if (streakDoc) {
-    streakDoc.currentStreak = calculatedStreak;
-    streakDoc.bestStreak = Math.max(streakDoc.bestStreak, calculatedStreak);
-    if (calculatedStreak > 0) {
-      streakDoc.lastActiveDate = new Date();
-    }
-    await streakDoc.save();
-  } else {
-    await Streak.create({
-      user: userId,
-      currentStreak: calculatedStreak,
-      bestStreak: calculatedStreak,
-      lastActiveDate: calculatedStreak > 0 ? new Date() : null
-    });
-  }
-
-  // Populate DailyActivity from submissions
+  // Populate DailyActivity from accepted submissions (UTC-normalized days).
   const recentSubs = normalizedProfile.recentSubmissions || [];
+  const dayBuckets = new Map(); // utcDayKey -> [{ problemId, title, difficulty }]
+
   for (const sub of recentSubs) {
     if (sub.timestamp) {
-      const subDate = new Date(sub.timestamp);
-      subDate.setHours(0, 0, 0, 0);
-
-      // Check if this problem was already recorded in daily activity
-      const activityExists = await DailyActivity.findOne({
-        user: userId,
-        date: subDate,
-        'problemsSolved.problemId': sub.problemId
-      });
-
-      if (!activityExists) {
-        await DailyActivity.findOneAndUpdate(
-          { user: userId, date: subDate },
-          {
-            $inc: { problemsSolvedCount: 1 },
-            $push: {
-              problemsSolved: {
-                problemId: sub.problemId,
-                platform: 'LeetCode',
-                title: sub.problemTitle,
-                difficulty: sub.difficulty
-              }
-            }
-          },
-          { upsert: true, new: true }
-        );
+      const key = utcDayKey(sub.timestamp);
+      if (!dayBuckets.has(key)) dayBuckets.set(key, []);
+      const bucket = dayBuckets.get(key);
+      if (!bucket.some((b) => b.problemId === sub.problemId)) {
+        bucket.push({ problemId: sub.problemId, title: sub.problemTitle, difficulty: sub.difficulty });
       }
     }
   }
 
-  await LeetCodeStat.findOneAndUpdate(
-    { user: userId },
-    {
-      totalSolved: normalizedProfile.summary.totalSolved || 0,
-      easySolved: normalizedProfile.summary.easySolved || 0,
-      mediumSolved: normalizedProfile.summary.mediumSolved || 0,
-      hardSolved: normalizedProfile.summary.hardSolved || 0,
-      ranking: normalizedProfile.summary.ranking || null,
-      lastSyncedAt: new Date(),
-      rawProfile: normalizedProfile,
-    },
-    { upsert: true, new: true }
-  );
+  // Batch persist DailyActivity: one read + one bulkWrite instead of N queries.
+  if (dayBuckets.size > 0) {
+    const dayDates = [...dayBuckets.keys()].map((key) => utcDay(new Date(`${key}T00:00:00Z`)));
+    const existing = await DailyActivity.find({
+      user: userId,
+      date: { $in: dayDates },
+    }).select('date problemsSolved -_id').lean();
 
-  const user = await User.findById(userId);
-  if (user) {
-    if (providedUsername && user.leetcodeUsername !== providedUsername) {
-      user.leetcodeUsername = providedUsername;
+    const existingByKey = new Map(existing.map((a) => [utcDayKey(a.date), a]));
+
+    const ops = [];
+    for (const [key, items] of dayBuckets) {
+      const date = utcDay(new Date(`${key}T00:00:00Z`));
+      const current = existingByKey.get(key);
+      const mapped = items.map((i) => ({ problemId: i.problemId, platform: 'LeetCode', title: i.title, difficulty: i.difficulty }));
+
+      if (current) {
+        // Merge: only push problems not already recorded for that day.
+        const existingIds = new Set((current.problemsSolved || []).map((p) => p.problemId).filter(Boolean));
+        const toAdd = mapped.filter((i) => !existingIds.has(i.problemId));
+        if (toAdd.length) {
+          ops.push({
+            updateOne: {
+              filter: { user: userId, date },
+              update: {
+                $inc: { problemsSolvedCount: toAdd.length },
+                $push: { problemsSolved: { $each: toAdd } },
+              },
+            },
+          });
+        }
+      } else {
+        ops.push({
+          updateOne: {
+            filter: { user: userId, date },
+            update: {
+              $setOnInsert: {
+                user: userId,
+                date,
+                problemsSolvedCount: mapped.length,
+                problemsSolved: mapped,
+              },
+            },
+            upsert: true,
+          },
+        });
+      }
     }
-    if (!user.leetcode && leetcodeUsername) {
-      user.leetcode = leetcodeUsername;
-    }
-    if (user.isModified('leetcodeUsername') || user.isModified('leetcode')) {
-      await user.save();
+
+    if (ops.length > 0) {
+      await DailyActivity.bulkWrite(ops, { ordered: false });
     }
   }
+
+  // Recompute streak server-side from DailyActivity and persist it.
+  const { currentStreak, bestStreak } = await getStreakData(userId);
+  await Streak.updateOne(
+    { user: userId },
+    {
+      $set: {
+        currentStreak,
+        bestStreak: Math.max(bestStreak, 0),
+        lastActiveDate: currentStreak > 0 ? new Date() : null,
+      },
+    },
+    { upsert: true }
+  );
+
+  // Unify on the canonical leetcodeUsername field.
+  const user = await User.findById(userId);
+  if (user && leetcodeUsername && user.leetcodeUsername !== leetcodeUsername) {
+    user.leetcodeUsername = leetcodeUsername;
+    await user.save();
+  }
+
+  // Derive per-topic progress from the accepted submissions and persist it to
+  // TopicProgress, so the tracker/radar/strengths reflect real solved problems.
+  await deriveTopicProgress(userId);
 
   return {
     leetcodeData: {
@@ -437,6 +413,7 @@ const syncLeetCodeProfile = async ({ userId, username, fetchImpl = fetch }) => {
         mediumSolved: leetcodeStats.mediumSolved,
         hardSolved: leetcodeStats.hardSolved,
         ranking: leetcodeStats.ranking,
+        acceptanceRate: leetcodeStats.acceptanceRate,
       },
       contestRating: leetcodeStats.contestRating,
       contestHistory: leetcodeStats.contestHistory,
