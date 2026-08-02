@@ -13,7 +13,9 @@ const readinessRoutes = require('./routes/readinessRoutes');
 
 const app = express();
 const PORT = config.port;
-const HOST = process.env.HOST || '127.0.0.1';
+// Bind to all interfaces by default so cloud hosts (Render, etc.) can detect
+// the listening port. A HOST env override is still honored if one is set.
+const HOST = process.env.HOST || '0.0.0.0';
 
 // Scheduler (start after server is ready)
 const { startScheduler } = require('./scheduler/leetcodeSyncScheduler');
