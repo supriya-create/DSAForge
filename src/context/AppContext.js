@@ -3,7 +3,13 @@ import { useToast } from '../components/ui';
 
 const AppContext = createContext();
 
-const API_BASE = process.env.REACT_APP_API_URL || '';
+// Production calls same-origin /api/*, which Vercel rewrites to the backend
+// (see vercel.json). This keeps the auth cookie first-party — critical for
+// cross-site cookie auth, which the browser would otherwise drop. Local dev
+// still points directly at the local backend via REACT_APP_API_URL.
+const API_BASE = process.env.NODE_ENV === 'production'
+  ? ''
+  : (process.env.REACT_APP_API_URL || '');
 
 const DEFAULT_TOPICS = [
   { topic: 'Arrays', solved: 0, easy: 0, medium: 0, hard: 0, total: 80 },
